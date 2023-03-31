@@ -63,6 +63,13 @@ struct ListNode {
     struct ListNode *prev;
 } ;
 
+// 符号的值及其声明位置。
+typedef struct SymbolValue {
+  SourceLocation location;
+  LargestIntegralType value;
+} SymbolValue;
+
+
 /* Contains a list of values for a symbol.
  * NOTE: Each structure referenced by symbol_values_list_head must have a
  * SourceLocation as its' first member.
@@ -86,12 +93,60 @@ static SourceLocation global_last_parameter_location;
 // 所有当前分配的块的列表。
 static ListNode global_allocated_blocks;
 
-
-
+///声明本文件中定义的函数
+// Used by list_free() to deallocate values referenced by list nodes.
+typedef void (*CleanupListValue)(const void *value, void *cleanup_value_data);
+// Determines whether two values are the same.
+typedef int (*EqualityFunction)(const void *left, const void *right);
+// 解除分配列表引用的值。
+static void free_value(const void *value, void *cleanup_value_data) ;
 // 检查测试设置的任何剩余值是否从未通过执行检索，如果是这种情况，则测试失败。
 static int check_for_leftover_values(
         const ListNode * const map_head, const char * const error_message,
         const size_t number_of_symbol_names);
+// 确定链表是否为空，返回head->next == head
+static int list_empty(const ListNode * const head);
+
+static ListNode* list_initialize(ListNode * const node);
+static ListNode* list_add(ListNode * const head, ListNode *new_node);
+static ListNode* list_add_value(ListNode * const head, const void *value,
+                                const int count);
+static ListNode* list_remove(
+    ListNode * const node, const CleanupListValue cleanup_value,
+    void * const cleanup_value_data);
+static void list_remove_free(
+    ListNode * const node, const CleanupListValue cleanup_value,
+    void * const cleanup_value_data);
+static int list_empty(const ListNode * const head);
+static int list_find(
+    ListNode * const head, const void *value,
+    const EqualityFunction equal_func, ListNode **output);
+static int list_first(ListNode * const head, ListNode **output);
+static ListNode* list_free(
+    ListNode * const head, const CleanupListValue cleanup_value,
+    void * const cleanup_value_data);
+
+static void add_symbol_value(
+    ListNode * const symbol_map_head, const char * const symbol_names[],
+    const size_t number_of_symbol_names, const void* value, const int count);
+static int get_symbol_value(
+    ListNode * const symbol_map_head, const char * const symbol_names[],
+    const size_t number_of_symbol_names, void **output);
+static void free_value(const void *value, void *cleanup_value_data);
+static void free_symbol_map_value(
+    const void *value, void *cleanup_value_data);
+static void remove_always_return_values(ListNode * const map_head,
+                                        const size_t number_of_symbol_names);
+static int check_for_leftover_values(
+    const ListNode * const map_head, const char * const error_message,
+    const size_t number_of_symbol_names);
+// This must be called at the beginning of a test to initialize some data
+// structures.
+static void initialize_testing(const char *test_name);
+// This must be called at the end of a test to free() allocated structures.
+static void teardown_testing(const char *test_name);
+// Determine whether a source location is currently set.
+static int source_location_is_set(const SourceLocation * const location);
 
 // State of each test.
 typedef struct TestState {
@@ -109,10 +164,7 @@ struct MallocBlockInfo {
 } ;
 
 
-// Used by list_free() to deallocate values referenced by list nodes.
-typedef void (*CleanupListValue)(const void *value, void *cleanup_value_data);
-// Determines whether two values are the same.
-typedef int (*EqualityFunction)(const void *left, const void *right);
+
 // 用于检查整数类型范围的结构。
 struct CheckIntegerRange {
   CheckParameterEvent event;
@@ -134,7 +186,13 @@ typedef struct CheckMemoryData {
   const void *memory;
   size_t size;
 } CheckMemoryData;
-// 确定链表是否为空，返回head->next == head
+
+// Determine whether a source location is currently set.
+static int source_location_is_set(const SourceLocation * const location) {
+  assert_true(location);
+  return location->file && location->line; //两个都不为0说明已经被设置
+}
+
 static int list_empty(const ListNode * const head) {
     assert_true(head);
     return head->next == head;
@@ -195,12 +253,18 @@ static void list_remove_free(
     free(list_remove(node, cleanup_value, cleanup_value_data));
 }
 
+// 解除分配列表引用的值。
+static void free_value(const void *value, void *cleanup_value_data) ;
+
+
 
 // Releases memory associated to a symbol_map_value.
 static void free_symbol_map_value(const void *value,
                                   void *cleanup_value_data) {
+  ///先使用一个临时知map_value保存要删除的值，然后从列表中将该想删除，最后释放内存
   SymbolMapValue * const map_value = (SymbolMapValue*)value;
-  const unsigned int children = (unsigned int)cleanup_value_data;
+  const unsigned int children =static_cast<int>(reinterpret_cast<intptr_t>(cleanup_value_data));
+  ///const unsigned int children = (unsigned int)cleanup_value_data;
   assert_true(value);
   list_free(&map_value->symbol_values_list_head,
             children ? free_symbol_map_value : free_value,
@@ -398,7 +462,8 @@ static int global_running_test = 0;
 // mock_assert() can optionally jump back to expect_assert_failure().
 jmp_buf global_expect_assert_env;
 int global_expecting_assert = 0;
-// Exit the currently executing test.
+// 退出当前正在执行的测试，会尝试恢复开始测试之前保存的环境变量
+// 如果之前没有保存成功，则调用exit(-1)函数退出测试
 static void exit_test(const int quit_application) {
     if (global_running_test) {
         longjmp(global_run_test_env, 1);//用于恢复之前由setjmp保存的栈环境和执行位置
@@ -707,7 +772,36 @@ static int check_for_leftover_values(
     }
     return symbols_with_leftover_values;
 }
-
+// Get the next return value for the specified mock function.获取指定模拟函数的下一个返回值。
+LargestIntegralType _mock(const char * const function, const char* const file,
+                          const int line) {
+  void *result;
+  const int rc = get_symbol_value(&global_function_result_map_head,
+                                  &function, 1, &result);
+  if (rc) {
+    SymbolValue * const symbol = (SymbolValue*)result;
+    const LargestIntegralType value = symbol->value;
+    global_last_mock_value_location = symbol->location;
+    if (rc == 1) { //rc == 1 表示该值刚从global_function_result_map_head中删除，
+      free(symbol);
+    }
+    return value;
+  } else { //没有找到
+    print_error("ERROR: " SOURCE_LOCATION_FORMAT " - Could not get value "
+                "to mock function %s\n", file, line, function);
+    if (source_location_is_set(&global_last_mock_value_location)) {
+      print_error("Previously returned mock value was declared at "
+                  SOURCE_LOCATION_FORMAT "\n",
+                  global_last_mock_value_location.file,
+                  global_last_mock_value_location.line);
+    } else {
+      print_error("There were no previously returned mock values for "
+                  "this test.\n");
+    }
+    exit_test(1);
+  }
+  return 0;
+}
 void fail_if_blocks_allocated(const ListNode *const pNode, const char *const name) {
 
 }

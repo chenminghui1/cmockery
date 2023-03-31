@@ -1,33 +1,3 @@
-
-<html>
-<style>
-    .mac {
-        width:10px;
-        height:10px;
-        border-radius:5px;
-        float:left;
-        margin:10px 0 0 5px;
-    }
-    .b1 {
-        background:#E0443E;
-        margin-left: 10px;
-    }
-    .b2 { background:#DEA123; }
-    .b3 { background:#1AAB29; }
-    .warpper{
-        background:#121212;
-        border-radius:5px;
-        width:400px;
-    }
-</style>
-<div class="warpper">
-    <div class="mac b1"></div>
-    <div class="mac b2"></div>
-    <div class="mac b3"></div>
-<div>
-<br>
-</html>
-
 # cmockery单元测试库
 通过完成在源代码中给出的运行事例，逐步完善cmockery的仿写
 
@@ -53,16 +23,23 @@ static const int exception_signals[] = {
         SIGSYS,  //无效的系统调用，例如传递了错误的参数或调用了未实现的功能。
 };
 ```
+## 边界测试、
+
+## 错误处理测试、
+
+## 路径测试、
+
+## 局部数据结构测试、
+`assert_true`
+`assert_false`
 
 
 
-```cpp
-#include<iostream>
-using namespace std;
-int main(){
-    return 0;
-}
-```
+
+## 模块接口测试。
+
+## 常见错误的判断
+常见错误类型有，接口错误，I/0错误，数据结构错误，算法错误，比较及控制逻辑错误，错误处理错误，
 
 
 
@@ -116,3 +93,29 @@ unit_test_with_prefix(someprefix_, null_test_success),`
 `gcc -shared a.o b.o -o libxxx.so`
    ![img_1.png](doc_source/img_1.png "动态库创建流程")
 ### 使用
+
+## 类型转换
+#### c++四种强制类型转换
+* static_cast<type>(value)
+> static_cast<> 用于非多态类型的转换，如基本数据类型之间的转换，
+> 将指针转换为 void*，或将 void* 转换为指针。主要完成的和隐式类型转化累死的工作
+
+* dynamic_cast<>()
+> 主要用于将基类指针转化为派生类指针，向下转换的成功与否还与将要转换的类型有关，
+> 即要转换的指针指向的对象的实际类型与转换以后的对象类型一定要相同，否则转换失败。  
+> （1）其他三种都是编译时完成的，dynamic_cast是运行时处理的，运行时要进行类型检查。  
+> （2）不能用于内置的基本数据类型的强制转换。  
+> （3）dynamic_cast转换如果成功的话返回的是指向类的指针或引用，转换失败的话则会返回NULL。  
+> （4）使用dynamic_cast进行转换的，基类中一定要有虚函数，否则编译不通过。
+* reinterpret_cast<>()
+> 是c++一切决定于程序员的思想的体现，可以进行一些有破坏性的转化，但是一切后果自己承担
+> reinterpret_cast主要有三种强制转换用途：改变指针或引用的类型、
+> 1. 改变指针或引用的类型、 
+> 2. 将指针或引用转换为一个足够长度的整形、
+> 3. 将整型转换为指针或引用类型。
+> 
+#### 特殊情况
+* 将void*转化为unsigned int  
+ `static_cast<int>(reinterpret_cast<intptr_t>(void_p));`  
+  intptr_t 是 C++ 中的一个整数类型，它是一个有符号的整数类型，可以存储指针或句柄的值。它的大小与`void *`相同，通常为 32 位或 64 位.
+  作为中间变量，足够大可以包含`void*`的值，又可以在转化为整形是直接截断不被编译器报错

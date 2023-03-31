@@ -32,3 +32,8 @@
 331	815	1680080594317803023	../lib/libcmockery.a	32b54c30f52f74f0
 1	334	1680164519510645495	example/CMakeFiles/calculator_test.dir/calculator_test.cpp.o	78907623a2d94ad9
 1	54	1680165352813342479	example/CMakeFiles/calculator_test.dir/calculator.cpp.o	b7d182f94e26dab3
+1	722	1680233264971963210	CMakeFiles/cmockery.dir/cmockery.cpp.o	672e4a78249a199f
+722	2447	1680233266691961689	../lib/libcmockery.a	32b54c30f52f74f0
+1	429	1680245417808197487	example/CMakeFiles/calculator_test.dir/calculator_test.cpp.o	78907623a2d94ad9
+0	657	1680245418036196428	CMakeFiles/cmockery.dir/cmockery.cpp.o	672e4a78249a199f
+657	1928	1680245419304190531	../lib/libcmockery.a	32b54c30f52f74f0

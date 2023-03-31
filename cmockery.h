@@ -55,7 +55,7 @@
 #define cast_to_largest_integral_type(value) \
     ((LargestIntegralType)(value))
 
-// Retrieves a return value for the current function.
+// Retrieves a return value for the current function.检索当前函数的返回值
 #define mock() _mock(__func__, __FILE__, __LINE__)
 
 /* Stores a value to be returned by the specified function later.
@@ -369,6 +369,7 @@ extern int global_expecting_assert;
 extern jmp_buf global_expect_assert_env;
 
 // Retrieves a value for the given function, as set by "will_return".
+//检索给定函数的值，由“will_return”设置。
 LargestIntegralType _mock(const char * const function, const char* const file,
                           const int line);
 
