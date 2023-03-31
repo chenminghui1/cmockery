@@ -1,0 +1,12 @@
+/home/oslab/CLionProjects/cmockery/cmake-build-debug/CMakeFiles/cmockery.dir
+/home/oslab/CLionProjects/cmockery/cmake-build-debug/CMakeFiles/test.dir
+/home/oslab/CLionProjects/cmockery/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/oslab/CLionProjects/cmockery/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/oslab/CLionProjects/cmockery/cmake-build-debug/example/CMakeFiles/run_test.dir
+/home/oslab/CLionProjects/cmockery/cmake-build-debug/example/CMakeFiles/assert_module_test.dir
+/home/oslab/CLionProjects/cmockery/cmake-build-debug/example/CMakeFiles/assert_macro_test.dir
+/home/oslab/CLionProjects/cmockery/cmake-build-debug/example/CMakeFiles/allocate_module_test.dir
+/home/oslab/CLionProjects/cmockery/cmake-build-debug/example/CMakeFiles/calculator_test.dir
+/home/oslab/CLionProjects/cmockery/cmake-build-debug/example/CMakeFiles/test.dir
+/home/oslab/CLionProjects/cmockery/cmake-build-debug/example/CMakeFiles/edit_cache.dir
+/home/oslab/CLionProjects/cmockery/cmake-build-debug/example/CMakeFiles/rebuild_cache.dir
