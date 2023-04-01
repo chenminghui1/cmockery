@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <setjmp.h>
 #include <stdarg.h>
 #include <stddef.h>
-#include <setjmp.h>
-#include "../cmockery.h"
+#include "../include/cmockery.h"
+
+
 
 extern void leak_memory();
 extern void buffer_overflow();

@@ -11,7 +11,7 @@
 #include <csetjmp>
 #include <csignal>
 #include <cstring>
-#include "cmockery.h"
+#include "../include/cmockery.h"
 
 // 动态分配块周围的保护字节大小。
 #define MALLOC_GUARD_SIZE 16
@@ -729,7 +729,7 @@ int _run_test(
     if (function_type == UNIT_TEST_FUNCTION_TYPE_TEST) {
         std::cout<<function_name<<": Starting test\n";
     }
-    initialize_testing(function_name);
+    initialize_testing(function_name.c_str());
     return rc;
 }
 
@@ -827,9 +827,14 @@ LargestIntegralType _mock(const char * const function, const char* const file,
 void fail_if_blocks_allocated(const ListNode *const pNode, const char *const name) {
 
 }
-
+//把当前测试函数对应的参数和结果从对应的队列中删除，并声明返回的最后一个模拟值和检查的参数的值
 void teardown_testing(const char *const name) {
-
+  list_free(&global_function_result_map_head, free_symbol_map_value,
+            (void*)0);
+  initialize_source_location(&global_last_mock_value_location);
+  list_free(&global_function_parameter_map_head, free_symbol_map_value,
+            (void*)1);
+  initialize_source_location(&global_last_parameter_location);
 }
 
 int _run_test(

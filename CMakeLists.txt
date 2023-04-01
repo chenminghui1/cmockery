@@ -11,7 +11,7 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
 enable_testing()
 
-add_library(cmockery STATIC  cmockery.h cmockery.cpp)
+add_library(cmockery STATIC include/cmockery.h src/cmockery.cpp src/ctest_port.cpp include/ctest_port.h include/ctest_printers.h)
 
 add_subdirectory(example)
 

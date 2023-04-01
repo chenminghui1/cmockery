@@ -255,6 +255,7 @@
 //unit_test是一个函数指针，它包含了函数名、函数指针和函数类型。
 // 这个宏定义会将函数名、函数指针和函数类型作为参数传递给结构体tests，从而完成结构体的初始化。
 #define unit_test(f) { #f, f, UNIT_TEST_FUNCTION_TYPE_TEST }
+//prefix可以认为是suit，
 #define unit_test_with_prefix(prefix, f) { #prefix#f, f, UNIT_TEST_FUNCTION_TYPE_TEST }
 #define unit_test_setup(test, setup) \
     { #test "_" #setup, setup, UNIT_TEST_FUNCTION_TYPE_SETUP }
@@ -329,6 +330,8 @@
       _fail(__FILE__, __LINE__); \
     } \
   }
+
+
 //函数对象
 // Function prototype for setup, test and teardown functions.
 typedef void (*UnitTestFunction)(void **state);

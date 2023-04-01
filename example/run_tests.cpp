@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-#include "../cmockery.h"
+
 #include <iostream>
 #include <setjmp.h>
 #include <stdarg.h>
 #include <stddef.h>
+#include "../include/cmockery.h"
 
 // A test case that does nothing and succeeds.
 void null_test_success(void **state) {

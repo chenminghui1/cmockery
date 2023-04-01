@@ -6,4 +6,7 @@
 #define CMOCKERY_CONFIG_H
 
 #define UNIT_TESTING 1
+
+#define HAVE_MALLOC_H
+
 #endif // CMOCKERY_CONFIG_H

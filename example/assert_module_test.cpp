@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+#include <setjmp.h>
 #include <stdarg.h>
 #include <stddef.h>
-#include <setjmp.h>
-#include "../cmockery.h"
+#include "../include/cmockery.h"
+
 
 
 //让编译器知道需要在外部文件中查找函数
@@ -32,7 +32,7 @@ void increment_value_fail(void **state) {
 
 // This test case succeeds since increment_value() asserts on the NULL pointer.
 void increment_value_assert(void **state) {
-    int* a = new int{1};
+    int* a = nullptr;
     expect_assert_failure(increment_value(a));
 }
 

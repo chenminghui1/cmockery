@@ -49,11 +49,17 @@ cmake_ninja_workdir = /home/oslab/CLionProjects/cmockery/cmake-build-debug/
 
 build cmake_object_order_depends_target_cmockery: phony || CMakeFiles/cmockery.dir
 
-build CMakeFiles/cmockery.dir/cmockery.cpp.o: CXX_COMPILER__cmockery_Debug /home/oslab/CLionProjects/cmockery/cmockery.cpp || cmake_object_order_depends_target_cmockery
-  DEP_FILE = CMakeFiles/cmockery.dir/cmockery.cpp.o.d
+build CMakeFiles/cmockery.dir/src/cmockery.cpp.o: CXX_COMPILER__cmockery_Debug /home/oslab/CLionProjects/cmockery/src/cmockery.cpp || cmake_object_order_depends_target_cmockery
+  DEP_FILE = CMakeFiles/cmockery.dir/src/cmockery.cpp.o.d
   FLAGS = -g -std=gnu++14
   OBJECT_DIR = CMakeFiles/cmockery.dir
-  OBJECT_FILE_DIR = CMakeFiles/cmockery.dir
+  OBJECT_FILE_DIR = CMakeFiles/cmockery.dir/src
+
+build CMakeFiles/cmockery.dir/src/ctest_port.cpp.o: CXX_COMPILER__cmockery_Debug /home/oslab/CLionProjects/cmockery/src/ctest_port.cpp || cmake_object_order_depends_target_cmockery
+  DEP_FILE = CMakeFiles/cmockery.dir/src/ctest_port.cpp.o.d
+  FLAGS = -g -std=gnu++14
+  OBJECT_DIR = CMakeFiles/cmockery.dir
+  OBJECT_FILE_DIR = CMakeFiles/cmockery.dir/src
 
 
 # =============================================================================
@@ -63,7 +69,7 @@ build CMakeFiles/cmockery.dir/cmockery.cpp.o: CXX_COMPILER__cmockery_Debug /home
 #############################################
 # Link the static library ../lib/libcmockery.a
 
-build ../lib/libcmockery.a: CXX_STATIC_LIBRARY_LINKER__cmockery_Debug CMakeFiles/cmockery.dir/cmockery.cpp.o
+build ../lib/libcmockery.a: CXX_STATIC_LIBRARY_LINKER__cmockery_Debug CMakeFiles/cmockery.dir/src/cmockery.cpp.o CMakeFiles/cmockery.dir/src/ctest_port.cpp.o
   LANGUAGE_COMPILE_FLAGS = -g
   OBJECT_DIR = CMakeFiles/cmockery.dir
   POST_BUILD = :

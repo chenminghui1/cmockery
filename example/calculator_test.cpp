@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-
+#include "../include/cmockery.h"
 #include <setjmp.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
-#include "../cmockery.h"
 
 #ifdef _WIN32
 // Compatibility with the Windows standard C library.
