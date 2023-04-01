@@ -16,9 +16,7 @@
 
 // A calculator example used to demonstrate the cmockery testing library.
 
-#ifdef HAVE_CONFIG_H
 #include "config.h"
-#endif
 #include <assert.h>
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
@@ -26,7 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <stdint.h>
 // If this is being built for a unit test.
 #if UNIT_TESTING
 
@@ -55,7 +53,7 @@ extern int example_test_fprintf(FILE *const file, const char *format, ...);
 #undef assert
 #endif // assert
 #define assert(expression)                                                     \
-  mock_assert((int)(expression), #expression, __FILE__, __LINE__)
+  mock_assert((long)(expression), #expression, __FILE__, __LINE__)
 void mock_assert(const int result, const char *expression, const char *file,
                  const int line);
 
@@ -231,7 +229,7 @@ static int perform_operation(int number_of_arguments, char *arguments[],
   return value;
 }
 
-int example_main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
   int return_value;
   int number_of_intermediate_values;
   int *intermediate_values;

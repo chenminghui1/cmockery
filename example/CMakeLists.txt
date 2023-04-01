@@ -18,5 +18,5 @@ target_link_libraries(assert_macro_test PUBLIC cmockery)
 add_executable(allocate_module_test allocate_module.cpp allocate_module_test.cpp)
 target_link_libraries(allocate_module_test PUBLIC cmockery)
 
-add_executable(calculator_test calculator.cpp calculator_test.cpp)
+add_executable(calculator_test calculator_test.cpp calculator.cpp config.h)
 target_link_libraries(calculator_test PUBLIC cmockery)

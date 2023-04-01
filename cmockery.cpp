@@ -252,6 +252,16 @@ static void list_remove_free(
     assert_true(node);
     free(list_remove(node, cleanup_value, cleanup_value_data));
 }
+//释放一个list
+static ListNode* list_free(
+    ListNode * const head, const CleanupListValue cleanup_value,
+    void * const cleanup_value_data) {
+  assert_true(head);
+  while (!list_empty(head))
+    free(list_remove(head->next,cleanup_value,cleanup_value_data));
+  return head;
+}
+
 
 // 解除分配列表引用的值。
 static void free_value(const void *value, void *cleanup_value_data) ;
@@ -490,7 +500,7 @@ static void set_source_location(
 }
 
 // Create function results and expected parameter lists.
-void initialize_testing(const std::string test_name) {
+void initialize_testing(const char *test_name) {
     list_initialize(&global_function_result_map_head);
     initialize_source_location(&global_last_mock_value_location);
     list_initialize(&global_function_parameter_map_head);
@@ -632,6 +642,18 @@ static int string_not_equal_display_error(
   return 0;
 }
 
+
+/* Returns 1 if the specified values are equal.  If the values are not equal
+ * an error is displayed and 0 is returned. */
+static int values_equal_display_error(const LargestIntegralType left,
+                                      const LargestIntegralType right) {
+  const int equal = left == right;
+  if (!equal) {
+    print_error(LargestIntegralTypePrintfFormat " != "
+                LargestIntegralTypePrintfFormat "\n", left, right);
+  }
+  return equal;
+}
 
 /* Determine whether the specified areas of memory are equal.  If they're equal
  * 1 is returned otherwise an error is displayed and 0 is returned. */
@@ -984,7 +1006,9 @@ static int check_string(const LargestIntegralType value,
       cast_largest_integral_type_to_pointer(char*, value),
       cast_largest_integral_type_to_pointer(char*, check_value_data));
 }
-/* Add a custom parameter checking function.  If the event parameter is NULL
+/* 添加自定义参数检查功能。如果事件参数为 NULL，则事件结构由此函数在内部分配。如果提供了事件参
+ * 数，则必须在堆上分配该参数，并且调用方不需要将其解除分配。
+ * Add a custom parameter checking function.  If the event parameter is NULL
  * the event structure is allocated internally by this function.  If event
  * parameter is provided it must be allocated on the heap and doesn't need to
  * be deallocated by the caller.
@@ -1006,7 +1030,22 @@ void _expect_check(
                    count);
 
 }
+///TODO: 使用函数对象或标准库替代
+/* CheckParameterValue callback to check whether a value is equal to an
+ * expected value. */
+static int check_value(const LargestIntegralType value,
+                       const LargestIntegralType check_value_data) {
+  return values_equal_display_error(value, check_value_data);
+}
 
+// 添加事件以检查参数是否等于预期值。
+void _expect_value(
+    const char* const function, const char* const parameter,
+    const char* const file, const int line,
+    const LargestIntegralType value, const int count) {
+  _expect_check(function, parameter, file, line, check_value, value, NULL,
+                count);
+}
 //添加事件以检查参数是否等于字符串。
 void _expect_string(
     const char* const function, const char* const parameter,
@@ -1086,6 +1125,32 @@ void _check_expected(
     exit_test(1);
   }
 }
+//判断模拟参数，如果result为0,
+void mock_assert(const int result, const char* const expression,
+                 const char * const file, const int line) {
+  if (!result) {
+    if (global_expecting_assert) {
+      longjmp(global_expect_assert_env, (LargestIntegralType)expression);
+    } else {
+      print_error("ASSERT: %s\n", expression);
+      _fail(file, line);
+    }
+  }
+}
+
+//函数对应的返回值由value指出，存储到global_function_result_map_head中去
+void _will_return(const char * const function_name, const char * const file,
+                  const int line, const LargestIntegralType value,
+                  const int count) {
+  SymbolValue * const return_value =
+      static_cast<SymbolValue *const>(malloc(sizeof(*return_value)));
+  assert_true(count > 0 || count == -1);
+  return_value->value = value;
+  set_source_location(&return_value->location, file, line);
+  add_symbol_value(&global_function_result_map_head, &function_name, 1,
+                   return_value, count);
+}
+
 void _assert_true(const LargestIntegralType result,
                     const char * const expression,
                     const char * const file, const int line) {
@@ -1208,7 +1273,15 @@ void _test_free(void* const ptr, const char* file, const int line) {
     free(block);
 }
 #define free test_free
-
+//调用_test_malloc
+void* _test_calloc(const size_t number_of_elements, const size_t size,
+                   const char* file, const int line) {
+  void* const ptr = _test_malloc(number_of_elements * size, file, line);
+  if (ptr) {
+    memset(ptr, 0, number_of_elements * size);
+  }
+  return ptr;
+}
 
 void _fail(const char * const file, const int line) {
     ///std::cerr<<"ERROR"<<file<<":"<<line<<"Failure"<<std::endl;

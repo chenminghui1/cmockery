@@ -267,14 +267,14 @@ build ../bin/allocate_module_test: CXX_EXECUTABLE_LINKER__allocate_module_test_D
 
 build cmake_object_order_depends_target_calculator_test: phony || cmake_object_order_depends_target_cmockery
 
-build example/CMakeFiles/calculator_test.dir/calculator.cpp.o: CXX_COMPILER__calculator_test_Debug /home/oslab/CLionProjects/cmockery/example/calculator.cpp || cmake_object_order_depends_target_calculator_test
-  DEP_FILE = example/CMakeFiles/calculator_test.dir/calculator.cpp.o.d
+build example/CMakeFiles/calculator_test.dir/calculator_test.cpp.o: CXX_COMPILER__calculator_test_Debug /home/oslab/CLionProjects/cmockery/example/calculator_test.cpp || cmake_object_order_depends_target_calculator_test
+  DEP_FILE = example/CMakeFiles/calculator_test.dir/calculator_test.cpp.o.d
   FLAGS = -g -std=gnu++14
   OBJECT_DIR = example/CMakeFiles/calculator_test.dir
   OBJECT_FILE_DIR = example/CMakeFiles/calculator_test.dir
 
-build example/CMakeFiles/calculator_test.dir/calculator_test.cpp.o: CXX_COMPILER__calculator_test_Debug /home/oslab/CLionProjects/cmockery/example/calculator_test.cpp || cmake_object_order_depends_target_calculator_test
-  DEP_FILE = example/CMakeFiles/calculator_test.dir/calculator_test.cpp.o.d
+build example/CMakeFiles/calculator_test.dir/calculator.cpp.o: CXX_COMPILER__calculator_test_Debug /home/oslab/CLionProjects/cmockery/example/calculator.cpp || cmake_object_order_depends_target_calculator_test
+  DEP_FILE = example/CMakeFiles/calculator_test.dir/calculator.cpp.o.d
   FLAGS = -g -std=gnu++14
   OBJECT_DIR = example/CMakeFiles/calculator_test.dir
   OBJECT_FILE_DIR = example/CMakeFiles/calculator_test.dir
@@ -287,7 +287,7 @@ build example/CMakeFiles/calculator_test.dir/calculator_test.cpp.o: CXX_COMPILER
 #############################################
 # Link the executable ../bin/calculator_test
 
-build ../bin/calculator_test: CXX_EXECUTABLE_LINKER__calculator_test_Debug example/CMakeFiles/calculator_test.dir/calculator.cpp.o example/CMakeFiles/calculator_test.dir/calculator_test.cpp.o | ../lib/libcmockery.a || ../lib/libcmockery.a
+build ../bin/calculator_test: CXX_EXECUTABLE_LINKER__calculator_test_Debug example/CMakeFiles/calculator_test.dir/calculator_test.cpp.o example/CMakeFiles/calculator_test.dir/calculator.cpp.o | ../lib/libcmockery.a || ../lib/libcmockery.a
   FLAGS = -g
   LINK_LIBRARIES = ../lib/libcmockery.a
   OBJECT_DIR = example/CMakeFiles/calculator_test.dir

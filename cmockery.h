@@ -58,9 +58,12 @@
 // Retrieves a return value for the current function.检索当前函数的返回值
 #define mock() _mock(__func__, __FILE__, __LINE__)
 
-/* Stores a value to be returned by the specified function later.
+/* 存储稍后由指定函数返回的值。count 参数返回 mock（） 应返回值的次数。
+ * 如果 count 设置为 -1，则始终返回该值。
+ * Stores a value to be returned by the specified function later.
  * The count parameter returns the number of times the value should be returned
  * by mock().  If count is set to -1 the value will always be returned.
+ * TODO:函数对象替代
  */
 #define will_return(function, value) \
     _will_return(#function, __FILE__, __LINE__, \
@@ -246,6 +249,8 @@
 // Generic method to kick off testing启动测试的通用方法
 #define run_test(f) _run_test(#f, f, NULL, UNIT_TEST_FUNCTION_TYPE_TEST, NULL)
 
+
+///TODO:使用函数对象替换函数指针
 // Initializes a UnitTest structure.
 //unit_test是一个函数指针，它包含了函数名、函数指针和函数类型。
 // 这个宏定义会将函数名、函数指针和函数类型作为参数传递给结构体tests，从而完成结构体的初始化。
@@ -324,10 +329,9 @@
       _fail(__FILE__, __LINE__); \
     } \
   }
-
+//函数对象
 // Function prototype for setup, test and teardown functions.
 typedef void (*UnitTestFunction)(void **state);
-
 // Function that determines whether a function parameter value is correct.
 typedef int (*CheckParameterValue)(const LargestIntegralType value,
                                     const LargestIntegralType check_value_data);
