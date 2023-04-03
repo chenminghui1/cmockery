@@ -16,8 +16,8 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <setjmp.h>
-#include <cmockery.h>
-#include <database.h>
+#include "../include/cmockery.h"
+#include "database.h"
 
 extern DatabaseConnection* connect_to_customer_database();
 extern unsigned int get_customer_id_by_name(
@@ -27,19 +27,19 @@ extern unsigned int get_customer_id_by_name(
 unsigned int mock_query_database(
         DatabaseConnection* const connection, const char * const query_string,
         void *** const results) {
-    *results = (void**)((unsigned)mock());
+    *results = (void**)((unsigned long)mock());
     return (unsigned int)mock();
 }
 
 // Mock of the connect to database function.
 DatabaseConnection* connect_to_database(const char * const database_url,
                                         const unsigned int port) {
-    return (DatabaseConnection*)((unsigned)mock());
+    return (DatabaseConnection*)((unsigned long)mock());
 }
 
 void test_connect_to_customer_database(void **state) {
     will_return(connect_to_database, 0x0DA7ABA53);
-    assert_int_equal((int)connect_to_customer_database(), 0x0DA7ABA53);
+    assert_int_equal((long)connect_to_customer_database(), 0x0DA7ABA53);
 }
 
 /* This test fails as the mock function connect_to_database() will have no

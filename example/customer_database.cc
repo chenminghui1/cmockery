@@ -15,10 +15,8 @@
  */
 #include <stddef.h>
 #include <stdio.h>
-#include <database.h>
-#ifdef _WIN32
-#define snprintf _snprintf
-#endif // _WIN32
+#include "database.h"
+
 
 // Connect to the database containing customer information.
 DatabaseConnection* connect_to_customer_database() {
@@ -40,5 +38,5 @@ unsigned int get_customer_id_by_name(
     if (number_of_results != 1) {
         return -1;
     }
-    return (unsigned int)results[0];
+    return (unsigned long)results[0];
 }

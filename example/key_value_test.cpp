@@ -17,7 +17,7 @@
 #include <stddef.h>
 #include <setjmp.h>
 #include <string.h>
-#include <cmockery.h>
+#include "../include/cmockery.h"
 
 /* This is duplicated here from the module setup_teardown.c to reduce the
  * number of files used in this test. */
@@ -62,7 +62,7 @@ void test_find_item_by_value(void **state) {
 
 void test_sort_items_by_key(void **state) {
     unsigned int i;
-    KeyValue * const kv = *state;
+    KeyValue * const kv = static_cast<KeyValue*>(*state);
     sort_items_by_key();
     for (i = 1; i < sizeof(key_values) / sizeof(key_values[0]); i++) {
         assert_true(kv[i - 1].key < kv[i].key);

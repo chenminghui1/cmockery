@@ -14,16 +14,12 @@
  * limitations under the License.
  */
 
-#include "../include/cmockery.h"
+
 #include <setjmp.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
-
-#ifdef _WIN32
-// Compatibility with the Windows standard C library.
-#define vsnprintf _vsnprintf
-#endif // _WIN32
+#include "../include/cmockery.h"
 
 #define array_length(x) (sizeof(x) / sizeof((x)[0]))
 

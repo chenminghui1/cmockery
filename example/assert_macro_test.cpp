@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "../include/cmockery.h"
+
 #include <csetjmp>
 #include <cstdarg>
 #include <cstddef>
+#include "../include/cmockery.h"
+
 extern const char *get_status_code_string(const unsigned int status_code);
 extern unsigned int string_to_status_code(const char *const status_code_string);
 
