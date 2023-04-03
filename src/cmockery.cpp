@@ -526,13 +526,13 @@ static const ListNode* check_point_allocated_blocks() {
 void vprint_message(const char* const format, va_list args) {
     char buffer[1024];
     vsnprintf(buffer, sizeof(buffer), format, args);
-    std::cout<<buffer<<std::endl;
+    std::cout<<buffer<<std::flush;
     //fputs(buffer,stdout);
 }
 void vprint_error(const char* const format, va_list args) {
     char buffer[1024];
     vsnprintf(buffer, sizeof(buffer), format, args);
-    std::cerr<<buffer<<std::endl;
+    std::cerr<<buffer<<std::flush;
     //fputs(buffer,stderr);
 }
 //TODO : 使用initial_list<>实现可变参数的读取
