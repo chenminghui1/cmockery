@@ -1,0 +1,6 @@
+# bin/和lib/是编译产生的文件，经常更新，不用同步
+bin/
+lib/
+.ninja_deps
+.ninja_deps
+cmake-build-debug/

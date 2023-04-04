@@ -27,6 +27,8 @@
  * library functions and types.
  */
 
+#include "ctest_port.h"
+
 // For those who are used to __func__ from gcc.
 #ifndef __func__
 #define __func__ __FUNCTION__
@@ -72,7 +74,8 @@
     _will_return(#function, __FILE__, __LINE__, \
                     cast_to_largest_integral_type(value), count)
 
-/* Add a custom parameter checking function.  If the event parameter is NULL
+/* 添加自定义参数检查功能。如果事件参数为 NULL，则事件结构由
+ * 此函数在内部分配。如果提供了事件参数，则必须在堆上分配该参数，并且调用方不需要将其解除分配。Add a custom parameter checking function.  If the event parameter is NULL
  * the event structure is allocated internally by this function.  If event
  * parameter is provided it must be allocated on the heap and doesn't need to
  * be deallocated by the caller.
@@ -293,12 +296,19 @@
 #define test_calloc(num, size) _test_calloc(num, size, __FILE__, __LINE__)
 #define test_free(ptr) _test_free(ptr, __FILE__, __LINE__)
 
+#define test_new(size)  _test_new(size,__FILE__, __LINE__)
+#define test_delete(ptr)   _test_delete(ptr,__FILE__, __LINE__)
+
 // Redirect malloc, calloc and free to the unit test allocators.
 #if UNIT_TESTING
 #define malloc test_malloc
 #define calloc test_calloc
 #define free test_free
+#define new test_new
+#define delete test_delete
 #endif // UNIT_TESTING
+
+
 
 ///TODO:使用try{...} catch{...}替代setjmp
 /*
@@ -341,11 +351,11 @@ typedef int (*CheckParameterValue)(const LargestIntegralType value,
                                     const LargestIntegralType check_value_data);
 
 // Type of the unit test function.
-typedef enum UnitTestFunctionType {
+enum UnitTestFunctionType {
     UNIT_TEST_FUNCTION_TYPE_TEST = 0,
     UNIT_TEST_FUNCTION_TYPE_SETUP,
     UNIT_TEST_FUNCTION_TYPE_TEARDOWN,
-} UnitTestFunctionType;
+} ;
 
 /* Stores a unit test function with its name and type.
  * NOTE: Every setup function must be paired with a teardown function.  It's
@@ -491,6 +501,11 @@ void* _test_malloc(const size_t size, const char* file, const int line);
 void* _test_calloc(const size_t number_of_elements, const size_t size,
                     const char* file, const int line);
 void _test_free(void* const ptr, const char* file, const int line);
+
+//////////
+void* _test_new(const size_t size, const char* file, const int line);
+void _test_delete(void* const ptr, const char* file, const int line);
+
 
 void _fail(const char * const file, const int line);
 int _run_test(

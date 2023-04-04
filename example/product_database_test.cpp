@@ -16,8 +16,8 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <setjmp.h>
-#include <cmockery.h>
-#include <database.h>
+#include "../include/cmockery.h"
+#include "database.h"
 
 extern DatabaseConnection* connect_to_product_database();
 
@@ -28,14 +28,14 @@ DatabaseConnection* connect_to_database(const char * const url,
                                         const unsigned int port) {
     check_expected(url);
     check_expected(port);
-    return (DatabaseConnection*)((unsigned)mock());
+    return (DatabaseConnection*)((unsigned long)mock());
 }
 
 void test_connect_to_product_database(void **state) {
     expect_string(connect_to_database, url, "products.abcd.org");
     expect_value(connect_to_database, port, 322);
     will_return(connect_to_database, 0xDA7ABA53);
-    assert_int_equal((int)connect_to_product_database(), 0xDA7ABA53);
+    assert_int_equal((long)connect_to_product_database(), 0xDA7ABA53);
 }
 
 /* This test will fail since the expected URL is different to the URL that is
@@ -44,7 +44,7 @@ void test_connect_to_product_database_bad_url(void **state) {
     expect_string(connect_to_database, url, "products.abcd.com");
     expect_value(connect_to_database, port, 322);
     will_return(connect_to_database, 0xDA7ABA53);
-    assert_int_equal((int)connect_to_product_database(), 0xDA7ABA53);
+    assert_int_equal((long)connect_to_product_database(), 0xDA7ABA53);
 }
 
 /* This test will fail since the mock connect_to_database() will attempt to
@@ -53,7 +53,7 @@ void test_connect_to_product_database_bad_url(void **state) {
 void test_connect_to_product_database_missing_parameter(void **state) {
     expect_string(connect_to_database, url, "products.abcd.org");
     will_return(connect_to_database, 0xDA7ABA53);
-    assert_int_equal((int)connect_to_product_database(), 0xDA7ABA53);
+    assert_int_equal((long )connect_to_product_database(), 0xDA7ABA53);
 }
 
 int main(int argc, char* argv[]) {

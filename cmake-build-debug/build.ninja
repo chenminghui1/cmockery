@@ -378,6 +378,44 @@ build ../bin/key_value_test: CXX_EXECUTABLE_LINKER__key_value_test_Debug example
   TARGET_FILE = ../bin/key_value_test
   TARGET_PDB = key_value_test.dbg
 
+# =============================================================================
+# Object build statements for EXECUTABLE target product_database_test
+
+
+#############################################
+# Order-only phony target for product_database_test
+
+build cmake_object_order_depends_target_product_database_test: phony || cmake_object_order_depends_target_cmockery
+
+build example/CMakeFiles/product_database_test.dir/product_database.cpp.o: CXX_COMPILER__product_database_test_Debug /home/oslab/CLionProjects/cmockery/example/product_database.cpp || cmake_object_order_depends_target_product_database_test
+  DEP_FILE = example/CMakeFiles/product_database_test.dir/product_database.cpp.o.d
+  FLAGS = -g -std=gnu++14
+  OBJECT_DIR = example/CMakeFiles/product_database_test.dir
+  OBJECT_FILE_DIR = example/CMakeFiles/product_database_test.dir
+
+build example/CMakeFiles/product_database_test.dir/product_database_test.cpp.o: CXX_COMPILER__product_database_test_Debug /home/oslab/CLionProjects/cmockery/example/product_database_test.cpp || cmake_object_order_depends_target_product_database_test
+  DEP_FILE = example/CMakeFiles/product_database_test.dir/product_database_test.cpp.o.d
+  FLAGS = -g -std=gnu++14
+  OBJECT_DIR = example/CMakeFiles/product_database_test.dir
+  OBJECT_FILE_DIR = example/CMakeFiles/product_database_test.dir
+
+
+# =============================================================================
+# Link build statements for EXECUTABLE target product_database_test
+
+
+#############################################
+# Link the executable ../bin/product_database_test
+
+build ../bin/product_database_test: CXX_EXECUTABLE_LINKER__product_database_test_Debug example/CMakeFiles/product_database_test.dir/product_database.cpp.o example/CMakeFiles/product_database_test.dir/product_database_test.cpp.o | ../lib/libcmockery.a || ../lib/libcmockery.a
+  FLAGS = -g
+  LINK_LIBRARIES = ../lib/libcmockery.a
+  OBJECT_DIR = example/CMakeFiles/product_database_test.dir
+  POST_BUILD = :
+  PRE_LINK = :
+  TARGET_FILE = ../bin/product_database_test
+  TARGET_PDB = product_database_test.dbg
+
 
 #############################################
 # Utility command for test
@@ -433,6 +471,8 @@ build key_value_test: phony ../bin/key_value_test
 
 build libcmockery.a: phony ../lib/libcmockery.a
 
+build product_database_test: phony ../bin/product_database_test
+
 build run_test: phony ../bin/run_test
 
 # =============================================================================
@@ -450,7 +490,7 @@ build all: phony ../lib/libcmockery.a example/all
 #############################################
 # Folder: /home/oslab/CLionProjects/cmockery/cmake-build-debug/example
 
-build example/all: phony ../bin/run_test ../bin/assert_module_test ../bin/assert_macro_test ../bin/allocate_module_test ../bin/customer_database_test ../bin/calculator_test ../bin/key_value_test
+build example/all: phony ../bin/run_test ../bin/assert_module_test ../bin/assert_macro_test ../bin/allocate_module_test ../bin/customer_database_test ../bin/calculator_test ../bin/key_value_test ../bin/product_database_test
 
 # =============================================================================
 # Built-in targets

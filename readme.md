@@ -131,6 +131,14 @@ lambda表达式也是一个函数对象，编译遇到一个lambda表达式就�
 
 ### 标准库<function.h>
 
+## 异常处理
+### try{...} catch{...}
+1. try里面定义的变量是局部变量，无法在代码块外面使用
+
+## git使用
+### 使用场景一：下班后使用另一台电脑继续开发
+
+
 # 困难
 ### 问题：宏定义
 1. 宏定义的生存周期：从宏的定义位置，直到文件结束或遇到undef
@@ -150,6 +158,23 @@ answer： stderr和stdout在默认情况下，stdout是行缓冲的，它的输�
 answer：需要。在C++中，如果将内联函数的实现和声明分开，需要在实现处也加上inline关键词。
 因为内联函数要在调用点展开，所以编译器必须随处可见内联函数的定义，要不然就成了非内联函数的调用了。所以，每个调用了内联函数的文件都出现了
 该内联函数的定义。
+
+
+### new
+1. operator new 操作符:  
+   new operator操作符可以被重载，不调用构造函数，使用示例：  
+   `FUNC *pFunc2 = (FUNC*) ::operator new(sizeof(FUNC));`   
+    `::operator delete pFunc2`  
+   ::表示全局，（type*)因为operator new返回void*指针，需要类型转换为对应类型。  
+2. new  operator 操作符：
+    operator new操作符不可以被重载，调用构造函数，调用的时候先申请内存，再调用构造函数，使用示例：
+    ```c++
+    type * ptr = new type(initi_list);   
+    type * ptr = new []type(initi_list);
+   ```
+3. placement new操作符：  
+    仅仅返回已经申请好内存的指针，它通常应用在对效率要求高的场景下，提前申请好内存，能够节省申请内存过程中耗费的时间。
+    ![img.png](doc_source/placement_new.png)
 
 
 

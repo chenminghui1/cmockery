@@ -9,6 +9,7 @@
 /home/oslab/CLionProjects/cmockery/cmake-build-debug/example/CMakeFiles/customer_database_test.dir
 /home/oslab/CLionProjects/cmockery/cmake-build-debug/example/CMakeFiles/calculator_test.dir
 /home/oslab/CLionProjects/cmockery/cmake-build-debug/example/CMakeFiles/key_value_test.dir
+/home/oslab/CLionProjects/cmockery/cmake-build-debug/example/CMakeFiles/product_database_test.dir
 /home/oslab/CLionProjects/cmockery/cmake-build-debug/example/CMakeFiles/test.dir
 /home/oslab/CLionProjects/cmockery/cmake-build-debug/example/CMakeFiles/edit_cache.dir
 /home/oslab/CLionProjects/cmockery/cmake-build-debug/example/CMakeFiles/rebuild_cache.dir

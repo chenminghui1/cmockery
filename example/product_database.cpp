@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <database.h>
+#include "database.h"
 
 // Connect to the database containing customer information.
 DatabaseConnection* connect_to_product_database() {

@@ -20,3 +20,5 @@ add_executable(customer_database_test customer_database.cc customer_database_tes
 add_executable(calculator_test calculator_test.cpp calculator.cpp config.h)
 
 add_executable(key_value_test key_value.cpp key_value_test.cpp)
+
+add_executable(product_database_test product_database.cpp product_database_test.cpp)

@@ -278,7 +278,7 @@ static void free_symbol_map_value(const void *value,
   assert_true(value);
   list_free(&map_value->symbol_values_list_head,
             children ? free_symbol_map_value : free_value,
-            (void*)(children - 1));
+            static_cast<void*>((int*)cleanup_value_data - 1));///FIXME :类型有问题
   free(map_value);
 }
 
@@ -475,7 +475,7 @@ int global_expecting_assert = 0;
 // 退出当前正在执行的测试，会尝试恢复开始测试之前保存的环境变量
 // 如果之前没有保存成功，则调用exit(-1)函数退出测试
 static void exit_test(const int quit_application) {
-    if (global_running_test) {
+    if (global_running_test) { //如果是被测程序出现错误，恢复测试测序开始之前的状态，不退出测试，否则
         longjmp(global_run_test_env, 1);//用于恢复之前由setjmp保存的栈环境和执行位置
         //并传入一个全局变量global_run_test_env作为保存环境的对象，以及一个整数1作为从setjmp返回的值。
         // 这意味着程序会跳转到之前调用setjmp并保存global_run_test_env对象的地方，并从setjmp返回1。
@@ -532,7 +532,7 @@ void vprint_message(const char* const format, va_list args) {
 void vprint_error(const char* const format, va_list args) {
     char buffer[1024];
     vsnprintf(buffer, sizeof(buffer), format, args);
-    std::cerr<<buffer<<std::flush;
+    std::cerr<<buffer;
     //fputs(buffer,stderr);
 }
 //TODO : 使用initial_list<>实现可变参数的读取
@@ -1240,6 +1240,89 @@ void* _test_malloc(const size_t size, const char* file, const int line)  {
   return ptr;
 }
 #define malloc test_malloc
+
+#undef new
+void * _test_new(const size_t size, const char* file, const int line) {
+  char* ptr;
+  MallocBlockInfo *block_info;
+  ListNode * const block_list = get_allocated_blocks_list();
+  const size_t allocate_size = size + (MALLOC_GUARD_SIZE * 2) +
+                               sizeof(*block_info) + MALLOC_ALIGNMENT;
+  char*  block{nullptr};
+  try {
+    block = (char* const)::operator new(allocate_size);
+    block = const_cast<char * const>(block);
+    if(block== nullptr) { //new分配内存失败，返回空指针
+      throw std::bad_alloc();
+    }
+  }
+  catch (const std::bad_alloc &e) {
+    std::cerr<<"使用operator new分配地址失败"<<e.what();
+  }
+  catch (std::exception & exc) {
+    std::cerr<<exc.what();
+  }
+//  assert_true(block);
+
+  // Calculate the returned address.
+  //这段代码的作用是将block指针加上一定的偏移量，并将结果向下舍入到MALLOC_ALIGNMENT的倍数。
+  ptr = (char*)(((size_t)block + MALLOC_GUARD_SIZE + sizeof(*block_info) +
+                  MALLOC_ALIGNMENT) & ~(MALLOC_ALIGNMENT - 1));
+
+  // Initialize the guard blocks.
+  memset(ptr - MALLOC_GUARD_SIZE, MALLOC_GUARD_PATTERN, MALLOC_GUARD_SIZE);
+  //memset将一段内存设置为指定的值
+  memset(ptr + size, MALLOC_GUARD_PATTERN, MALLOC_GUARD_SIZE);
+  memset(ptr, MALLOC_ALLOC_PATTERN, size);
+
+  block_info = (MallocBlockInfo*)(ptr - (MALLOC_GUARD_SIZE +
+                                          sizeof(*block_info)));
+  set_source_location(&block_info->location, file, line);
+  block_info->allocated_size = allocate_size;
+  block_info->size = size;
+  block_info->block = block;
+  block_info->node.value = block_info;
+  list_add(block_list, &block_info->node);
+  return ptr;
+}
+#define new test_new
+
+#undef delete
+void _test_delete(void* const ptr, const char* file, const int line) {
+  unsigned int i;
+  char *block = (char*)ptr;
+  MallocBlockInfo *block_info;
+  _assert_true(reinterpret_cast<LargestIntegralType>(&ptr), "ptr", file, line);
+  block_info = (MallocBlockInfo*)(block - (MALLOC_GUARD_SIZE +
+                                            sizeof(*block_info)));
+  // Check the guard blocks.
+  {
+    char *guards[2] = {block - MALLOC_GUARD_SIZE,
+                       block + block_info->size};
+    for (i = 0; i < ARRAY_LENGTH(guards); i++) {
+      unsigned int j;
+      char * const guard = guards[i];
+      for (j = 0; j < MALLOC_GUARD_SIZE; j++) {
+        const char diff = guard[j] - MALLOC_GUARD_PATTERN;
+        if (diff) {
+          print_error(
+              "Guard block of 0x%08x size=%d allocated by "
+              SOURCE_LOCATION_FORMAT " at 0x%08x is corrupt\n",
+              (size_t)ptr, block_info->size,
+              block_info->location.file, block_info->location.line,
+              (size_t)&guard[j]);
+          _fail(file, line);
+        }
+      }
+    }
+  }
+  list_remove(&block_info->node, NULL, NULL);
+
+  block = static_cast<char *>(block_info->block);
+  memset(block, MALLOC_FREE_PATTERN, block_info->allocated_size);
+  delete(block);
+}
+
 
 // Use the real free in this function.
 #undef free
