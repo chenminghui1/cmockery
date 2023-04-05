@@ -11,6 +11,7 @@
 #include <csetjmp>
 #include <csignal>
 #include <cstring>
+#include <sys/time.h>
 #include "../include/cmockery.h"
 
 // 动态分配块周围的保护字节大小。
@@ -902,12 +903,21 @@ int _run_test(
         }
     }
     if (function_type == UNIT_TEST_FUNCTION_TYPE_TEST) {
-        print_message("%s: Starting test\n", function_name);
+        print_message("[ RUN      ] %s\n", function_name);
     }
     initialize_testing(function_name);
     global_running_test = 1;
     if (setjmp(global_run_test_env) == 0) {
+        struct timeval time_start, time_end;
+        gettimeofday(&time_start, NULL);
+
+        //执行测试
         Function(state ? state : &current_state);
+
+        // Collect time data
+        gettimeofday(&time_end, NULL);
+
+        //检查是否已经将全部参数和返回值测试完
         fail_if_leftover_values(function_name);
 
         /* 如果这是一个设置函数，则忽略任何分配的块，仅确保它们在拆卸时被释放
@@ -921,12 +931,18 @@ int _run_test(
         global_running_test = 0;
 
         if (function_type == UNIT_TEST_FUNCTION_TYPE_TEST) {
-            print_message("%s: Test completed successfully.\n", function_name);
+            print_message("[       OK ] %s\n", function_name);
         }
         rc = 0;
     } else {
         global_running_test = 0;
-        print_message("%s: Test failed.\n", function_name);
+        ///TODO:新的一种测试类型
+       /* if(UNIT_TEST_FUNCTION_TYPE_TEST_EXPECT_FAILURE == function_type) {
+            rc = 0;
+            print_message("[EXPCT FAIL] %s\n", function_name);
+        } else {)*/
+
+        print_message("[  FAILED  ] %s\n", function_name);
     }
     teardown_testing(function_name);
 
