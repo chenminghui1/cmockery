@@ -28,6 +28,9 @@
 // Printf formatting for source code locations.
 #define SOURCE_LOCATION_FORMAT "%s:%d"
 
+#ifndef PRIxMAX
+#define PRIxMAX "llx"
+#endif
 // 计算数组中的元素数
 #define ARRAY_LENGTH(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -289,7 +292,8 @@ static void free_value(const void *value, void *cleanup_value_data) {
     free((void*)value);
 }
 
-/* Find a value in the list using the equal_func to compare each node with the
+/* 使用equal_func在列表中查找值，将每个节点与该值进行比较
+ * Find a value in the list using the equal_func to compare each node with the
 * value.*/
 static int list_find(ListNode * const head, const void *value,
                      const EqualityFunction equal_func, ListNode **output) {
@@ -360,59 +364,6 @@ static void add_symbol_value(ListNode * const symbol_map_head,
   }
 }
 
-
-/* Gets the next value associated with the given hierarchy of symbols.
- * The value is returned as an output parameter with the function returning the
- * node's old refcount value if a value is found, 0 otherwise.
- * This means that a return value of 1 indicates the node was just removed from
- * the list.
- * 获取与给定符号层次结构关联的下一个值。该值作为输出参数返回，如果找到值，函数将返回节点的
- * 旧 refcount 值，否则为 0。这意味着返回值 1 表示该节点刚刚从列表中删除。
- */
-static int get_symbol_value(
-    ListNode * const head, const char * const symbol_names[],
-    const size_t number_of_symbol_names, void **output) {
-  const char* symbol_name;
-  ListNode *target_node;
-  assert_true(head);
-  assert_true(symbol_names);
-  assert_true(number_of_symbol_names);
-  assert_true(output);
-  symbol_name = symbol_names[0];
-
-  if (list_find(head, symbol_name, symbol_names_match, &target_node)) {
-    SymbolMapValue *map_value;
-    ListNode *child_list;
-    int return_value = 0;
-    assert_true(target_node);
-    assert_true(target_node->value);
-
-    map_value = (SymbolMapValue*)target_node->value;
-    child_list = &map_value->symbol_values_list_head;
-
-    if (number_of_symbol_names == 1) {
-      ListNode *value_node = NULL;
-      return_value = list_first(child_list, &value_node);
-      assert_true(return_value);
-      *output = (void*) value_node->value;
-      return_value = value_node->refcount;
-      if (--value_node->refcount == 0) {
-        list_remove_free(value_node, NULL, NULL);
-      }
-    } else {
-      return_value = get_symbol_value(
-          child_list, &symbol_names[1], number_of_symbol_names - 1,
-          output);
-    }
-    if (list_empty(child_list)) {
-      list_remove_free(target_node, free_symbol_map_value, (void*)0);
-    }
-    return return_value;
-  } else {
-    print_error("No entries for symbol %s.\n", symbol_name);
-  }
-  return 0;
-}
 
 /* Traverse down a tree of symbol values and remove the first symbol value
  * in each branch that has a refcount < -1 (i.e should always be returned
@@ -499,6 +450,7 @@ static void set_source_location(
   location->line = line;
 }
 
+// 创建函数结果和预期参数列表。
 // Create function results and expected parameter lists.
 void initialize_testing(const char *test_name) {
     list_initialize(&global_function_result_map_head);
@@ -507,7 +459,7 @@ void initialize_testing(const char *test_name) {
     initialize_source_location(&global_last_parameter_location);
 }
 
-// Get the list of allocated blocks.获得已分配的块的列表
+// Get the list of allocated blocks.获得已分配的块的列表,在每次改变测试函数之前释放，并检测是否发生内存泄漏
 static ListNode* get_allocated_blocks_list() {
     // If it initialized, initialize the list of allocated blocks.
     if (!global_allocated_blocks.value) {
@@ -824,8 +776,59 @@ LargestIntegralType _mock(const char * const function, const char* const file,
   }
   return 0;
 }
-void fail_if_blocks_allocated(const ListNode *const pNode, const char *const name) {
+/* Display the blocks allocated after the specified check point.  This
+ * function returns the number of blocks displayed. */
+static int display_allocated_blocks(const ListNode * const check_point) {
+    const ListNode * const head = get_allocated_blocks_list();
+    const ListNode *node;
+    int allocated_blocks = 0;
+    assert_true(check_point);
+    for (node = check_point->next; node != head; node = node->next) {
+        const MallocBlockInfo * const block_info =
+                (const MallocBlockInfo*)node->value;
+        assert_true(block_info);
 
+        if (!allocated_blocks) {
+            print_error("Blocks allocated...\n");
+        }
+        print_error("  0x%08" PRIxMAX " : " SOURCE_LOCATION_FORMAT "\n",
+                    cast_to_largest_integral_type(block_info->block),
+                block_info->location.file,
+                block_info->location.line);
+        allocated_blocks ++;
+    }
+    return allocated_blocks;
+
+}
+
+
+// 释放在指定检查点之后分配的所有块。
+// Free all blocks allocated after the specified check point.
+static void free_allocated_blocks(const ListNode * const check_point) {
+    const ListNode * const head = get_allocated_blocks_list();
+    const ListNode *node;
+    assert_true(check_point);
+
+    node = check_point->next;
+    assert_true(node);
+
+    while (node != head) {
+        MallocBlockInfo * const block_info = (MallocBlockInfo*)node->value;
+        node = node->next;
+        free((char*)block_info + sizeof(*block_info) + MALLOC_GUARD_SIZE);
+    }
+}
+// 如果在一个测试结束后，仍然有未分配的块，则为内存泄漏
+// Fail if any any blocks are allocated after the specified check point.
+static void fail_if_blocks_allocated(const ListNode * const check_point,
+                              const char * const test_name) {
+    const int allocated_blocks = display_allocated_blocks(check_point);
+    if (allocated_blocks) {
+        free_allocated_blocks(check_point);
+        print_error("ERROR: %s leaked %d block(s)\n", test_name,
+                    allocated_blocks);
+        exit_test(1);
+    }
 }
 //把当前测试函数对应的参数和结果从对应的队列中删除，并声明返回的最后一个模拟值和检查的参数的值
 void teardown_testing(const char *const name) {
@@ -835,6 +838,48 @@ void teardown_testing(const char *const name) {
   list_free(&global_function_parameter_map_head, free_symbol_map_value,
             (void*)1);
   initialize_source_location(&global_last_parameter_location);
+}
+
+static int get_symbol_value(ListNode *const head, const char *const *symbol_names, const size_t number_of_symbol_names,
+                           void **output) {
+    const char* symbol_name;
+    ListNode *target_node;
+
+    assert_true(head);
+    assert_true(symbol_names);
+    assert_true(number_of_symbol_names);
+
+    symbol_name = symbol_names[0];
+    if (list_find(head, symbol_name, symbol_names_match, &target_node)) {
+        SymbolMapValue *map_value;
+        ListNode *child_list;
+        int return_value = 0;
+
+        map_value = (SymbolMapValue*)target_node->value;
+        child_list = &map_value->symbol_values_list_head;
+        if (number_of_symbol_names == 1) {
+            ListNode *value_node = NULL;
+            return_value = list_first(child_list, &value_node);
+            assert_true(return_value);
+            *output = (void*) value_node->value;
+            return_value = value_node->refcount;
+            if (--value_node->refcount == 0) {
+                list_remove_free(value_node, NULL, NULL);
+            }
+        } else {
+            return_value = get_symbol_value(
+                    child_list, &symbol_names[1], number_of_symbol_names - 1,
+                    output);
+        }
+        if (list_empty(child_list)) {
+            list_remove_free(target_node, free_symbol_map_value, (void*)0);
+        }
+        return return_value;
+    } else {
+        print_error("No entries for symbol %s.\n", symbol_name);
+    }
+    return 0;
+
 }
 
 int _run_test(
@@ -865,7 +910,9 @@ int _run_test(
         Function(state ? state : &current_state);
         fail_if_leftover_values(function_name);
 
-        /* If this is a setup function then ignore any allocated blocks
+        /* 如果这是一个设置函数，则忽略任何分配的块，仅确保它们在拆卸时被释放
+         * 如果不是，检测是否发生内存泄漏
+         * If this is a setup function then ignore any allocated blocks
          * only ensure they're deallocated on tear down. */
         if (function_type != UNIT_TEST_FUNCTION_TYPE_SETUP) {
             fail_if_blocks_allocated(check_point, function_name);
@@ -1086,10 +1133,17 @@ void _expect_any(
   _expect_check(function, parameter, file, line, check_any, 0, NULL,
                 count);
 }
-const int get_symbol_value(ListNode *pNode, const char *pString[2], int i,
-                           void **pVoid) {
-  return 1;
-}
+
+/* 获取与给定符号层次结构关联的下一个值。该值作为输出参数返回，如果找到值，函数将返回节点的
+ * 旧 refcount 值，否则为 0。这意味着返回值 1 表示该节点刚刚从列表中删除。
+ * Gets the next value associated with the given hierarchy of symbols.
+ * The value is returned as an output parameter with the function returning the
+ * node's old refcount value if a value is found, 0 otherwise.
+ * This means that a return value of 1 indicates the node was just removed from
+ * the list.
+ */
+
+
 void _check_expected(
     const char * const function_name, const char * const parameter_name,
     const char* file, const int line, const LargestIntegralType value) {
@@ -1130,7 +1184,7 @@ void _check_expected(
     exit_test(1);
   }
 }
-//判断模拟参数，如果result为0,
+//替换assert
 void mock_assert(const int result, const char* const expression,
                  const char * const file, const int line) {
   if (!result) {
