@@ -1,6 +1,8 @@
 # cmockery单元测试库
 通过完成在源代码中给出的运行事例，逐步完善cmockery的仿写
 
+@[toc]
+
 ## 运行测试（_run_tests _run_test)
 ### _run_tests 
 在unit_tests中初始化为一个列表，通过遍历列表，完成每个单独的测试
@@ -132,8 +134,57 @@ lambda表达式也是一个函数对象，编译遇到一个lambda表达式就�
 ### 标准库<function.h>
 
 ## 异常处理
-### try{...} catch{...}
+### try{...} catch(){...}
 1. try里面定义的变量是局部变量，无法在代码块外面使用
+
+## 信号
+C++的信号处理函数在`<csignal>`里面。  
+![img.png](doc_source/signal.png "常见信号描述")
+### signal()函数
+```c++
+typedef void (*sig_t)(int);
+sig_t signal(int signum, sig_t handler);
+```
+### sigaction()函数
+sigaction()允许单独获取信号的处理函数而不是设置，并且还可以设置各种属性对调用信号处理函数时
+的行为施以更加精准的控制，其函数原型如下所示:
+```c++
+int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);
+```
+<strong>函数参数和返回值含义如下：</strong>  
+<strong>signum</strong>：需要设置的信号，除了 SIGKILL 信号和 SIGSTOP 信号之外的任何信号。  
+<strong>act</strong>：act 参数是一个 `struct sigaction` 类型指针，指向一个 struct sigaction 数据结构，该数据结构描述了信
+号的处理方式，稍后介绍该数据结构；如果参数 act 不为 NULL，则表示需要为信号设置新的处理方式；如
+果参数 act 为 NULL，则表示无需改变信号当前的处理方式。  
+<strong>oldact</strong>：oldact 参数也是一个 struct sigaction 类型指针，指向一个 struct sigaction 数据结构。如果参数
+oldact 不为 NULL，则会将信号之前的处理方式等信息通过参数 oldact 返回出来；如果无意获取此类信息，
+那么可将该参数设置为 NULL。  
+<strong>返回值</strong>：成功返回 0；失败将返回-1，并设置 errno。
+```c++
+struct sigaction {
+ void (*sa_handler)(int);
+ void (*sa_sigaction)(int, siginfo_t *, void *);
+ sigset_t sa_mask;
+ int sa_flags;
+ void (*sa_restorer)(void);
+};
+```
+### 信号掩码
+* 当应用程序调用 signal()或 sigaction()函数为某一个信号设置处理方式时，进程会自动将该信号添加
+到信号掩码中，这样保证了在处理一个给定的信号时，如果此信号再次发生，那么它将会被阻塞；
+* 可以使用 sigprocmask()系统调用，随时可以显式地向信号掩码中添加/
+移除信号。
+
+## 工厂模式
+在工厂模式中，我们在创建对象时不会对客户端暴露创建逻辑，并且是通过使用一个共同的接口来指向新创建的对象。  
+<strong>意图</strong>：定义一个创建对象的接口，让其子类自己决定实例化哪一个工厂类，工厂模式使其创建过程延迟到子类进行。  
+优点： 
+1. 一个调用者想创建一个对象，只要知道其名称就可以了。 
+2. 扩展性高，如果想增加一个产品，只要扩展一个工厂类就可以。
+3. 屏蔽产品的具体实现，调用者只关心产品的接口。
+
+缺点：每次增加一个产品时，都需要增加一个具体类和对象实现工厂，使得系统中类的个数成倍增加，在一定程度上增加了系统的复杂度，同时也增加了系统具体类的依赖。这并不是什么好事。
+
 
 ## git使用
 ### 使用场景一：下班后使用另一台电脑继续开发

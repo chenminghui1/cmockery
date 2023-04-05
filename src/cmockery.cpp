@@ -11,17 +11,23 @@
 #include <csetjmp>
 #include <csignal>
 #include <cstring>
+#include <sys/time.h>
 #include "../include/cmockery.h"
 
+///XXX:使用const代替define，但是具体影响没有进行测试
 // 动态分配块周围的保护字节大小。
-#define MALLOC_GUARD_SIZE 16
+//#define MALLOC_GUARD_SIZE 16
+const int MALLOC_GUARD_SIZE{16};
 // Pattern used to initialize guard blocks.用于初始化保护块的模式。
-#define MALLOC_GUARD_PATTERN 0xEF
+//#define MALLOC_GUARD_PATTERN 0xEF
+const int MALLOC_GUARD_PATTERN{0xEF};
 /* Pattern used to initialize memory allocated with test_malloc().
  * 用于初始化使用 test_malloc（） 分配的内存的模式。
  */
-#define MALLOC_ALLOC_PATTERN 0xBA
-#define MALLOC_FREE_PATTERN 0xCD
+//#define MALLOC_ALLOC_PATTERN 0xBA
+const int MALLOC_ALLOC_PATTERN{0xBA};
+//#define MALLOC_FREE_PATTERN 0xCD
+const int MALLOC_FREE_PATTERN{0xCD};
 // Alignment of allocated blocks.对齐分配的块  NOTE: This must be base2.必须是2的倍数
 #define MALLOC_ALIGNMENT sizeof(size_t) //64位中为8,32位中为4
 
@@ -31,9 +37,14 @@
 #ifndef PRIxMAX
 #define PRIxMAX "llx"
 #endif
+
 // 计算数组中的元素数
 #define ARRAY_LENGTH(x) (sizeof(x) / sizeof((x)[0]))
-
+///XXX: 想要实现内敛函数的版本，但是报错size of array 'name' is not integral constant-experssion
+/*template<typename T>
+inline int ARRAY_LENGTH(T x) {
+  return sizeof (x) / sizeof(x[0]);
+}*/
 // Declare and initialize the pointer member of ValuePointer variable name
 // with ptr.
 #define declare_initialize_value_pointer_pointer(name, ptr) \
@@ -132,9 +143,13 @@ static ListNode* list_free(
 static void add_symbol_value(
     ListNode * const symbol_map_head, const char * const symbol_names[],
     const size_t number_of_symbol_names, const void* value, const int count);
+
+//获取与给定符号层次结构关联的下一个值。该值作为输出参数返回，如果找到值，函数将返回
+// 节点的旧 refcount 值，否则为 0。这意味着返回值 1 表示该节点刚刚从列表中删除。
 static int get_symbol_value(
     ListNode * const symbol_map_head, const char * const symbol_names[],
     const size_t number_of_symbol_names, void **output);
+// 解除分配列表引用的值。
 static void free_value(const void *value, void *cleanup_value_data);
 static void free_symbol_map_value(
     const void *value, void *cleanup_value_data);
@@ -210,7 +225,7 @@ static ListNode* list_initialize(ListNode * const node) {
 
   return node;
 }
-static ListNode* list_add(ListNode * const head, ListNode *new_node);
+
 /* Adds a value at the tail of a given list.
  * The node referencing the value is allocated from the heap.
  * 在给定列表的尾部添加一个值。引用该值的节点是从堆中分配的。*/
@@ -266,8 +281,7 @@ static ListNode* list_free(
 }
 
 
-// 解除分配列表引用的值。
-static void free_value(const void *value, void *cleanup_value_data) ;
+
 
 
 
@@ -308,7 +322,7 @@ static int list_find(ListNode * const head, const void *value,
   return 0;
 }
 
-// 返回列表的第一个节点
+// 返回列表的第一个节点,成功返回1,失败返回0.
 static int list_first(ListNode * const head, ListNode **output) {
   ListNode *target_node;
   assert_true(head);
@@ -653,7 +667,7 @@ static int memory_not_equal_display_error(
 }
 
 static void exception_handler(int sig) {
-    print_error("%s\n", strsignal(sig));
+    print_error("%s\n", strsignal(sig));///strsignal回去sig的描述性信息
     exit_test(1);
 }
 
@@ -848,17 +862,22 @@ static int get_symbol_value(ListNode *const head, const char *const *symbol_name
     assert_true(head);
     assert_true(symbol_names);
     assert_true(number_of_symbol_names);
+    assert_true(output);
 
     symbol_name = symbol_names[0];
+
     if (list_find(head, symbol_name, symbol_names_match, &target_node)) {
         SymbolMapValue *map_value;
         ListNode *child_list;
         int return_value = 0;
 
+        assert_true(target_node);
+        assert_true(target_node->value);
+
         map_value = (SymbolMapValue*)target_node->value;
         child_list = &map_value->symbol_values_list_head;
         if (number_of_symbol_names == 1) {
-            ListNode *value_node = NULL;
+            ListNode *value_node = nullptr;
             return_value = list_first(child_list, &value_node);
             assert_true(return_value);
             *output = (void*) value_node->value;
@@ -902,12 +921,21 @@ int _run_test(
         }
     }
     if (function_type == UNIT_TEST_FUNCTION_TYPE_TEST) {
-        print_message("%s: Starting test\n", function_name);
+        print_message("[ RUN      ] %s\n", function_name);
     }
     initialize_testing(function_name);
     global_running_test = 1;
     if (setjmp(global_run_test_env) == 0) {
+        struct timeval time_start, time_end;
+        gettimeofday(&time_start, NULL);
+
+        //执行测试
         Function(state ? state : &current_state);
+
+        // Collect time data
+        gettimeofday(&time_end, NULL);
+
+        //检查是否已经将全部参数和返回值测试完
         fail_if_leftover_values(function_name);
 
         /* 如果这是一个设置函数，则忽略任何分配的块，仅确保它们在拆卸时被释放
@@ -921,12 +949,18 @@ int _run_test(
         global_running_test = 0;
 
         if (function_type == UNIT_TEST_FUNCTION_TYPE_TEST) {
-            print_message("%s: Test completed successfully.\n", function_name);
+            print_message("[       OK ] %s\n", function_name);
         }
         rc = 0;
     } else {
         global_running_test = 0;
-        print_message("%s: Test failed.\n", function_name);
+        ///TODO:新的一种测试类型
+       /* if(UNIT_TEST_FUNCTION_TYPE_TEST_EXPECT_FAILURE == function_type) {
+            rc = 0;
+            print_message("[EXPCT FAIL] %s\n", function_name);
+        } else {)*/
+
+        print_message("[  FAILED  ] %s\n", function_name);
     }
     teardown_testing(function_name);
 

@@ -453,6 +453,8 @@ void _check_expected(
     const char * const function_name, const char * const parameter_name,
     const char* file, const int line, const LargestIntegralType value);
 
+// 可用于替换测试代码中的断言，以便与 check_assert（） 结合使用时，可以在不停止测试的情况下
+// 确定断言条件是否失败。
 // Can be used to replace assert in tested code so that in conjuction with
 // check_assert() it's possible to determine whether an assert condition has
 // failed without stopping a test.
