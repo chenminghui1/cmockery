@@ -119,12 +119,13 @@ void test_divide_by_zero(void **state) {
   expect_assert_failure(divide(100, 0));
 }
 
+///TODO:解决Segmentation fault问题
 /* Ensure find_operator_function_by_string() asserts when a NULL pointer is
  * specified as the table to search. */
 void test_find_operator_function_by_string_null_functions(void **state) {
-  expect_assert_failure(find_operator_function_by_string(1, NULL, "test"));
+  expect_assert_failure(find_operator_function_by_string(1, NULL, "add"));
 }
-///TODO:解决Segmentation fault问题
+
 /* Ensure find_operator_function_by_string() asserts when a NULL pointer is
  * specified as the string to search for. */
 void test_find_operator_function_by_string_null_string(void **state) {

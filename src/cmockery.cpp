@@ -13,7 +13,9 @@
 #include <cstring>
 #include <sys/time.h>
 #include "../include/cmockery.h"
-
+#include "../include/ctest_assert.h"
+#include "../include/ctest_exception.h"
+namespace ctest{
 ///XXX:使用const代替define，但是具体影响没有进行测试
 // 动态分配块周围的保护字节大小。
 //#define MALLOC_GUARD_SIZE 16
@@ -836,16 +838,29 @@ static void free_allocated_blocks(const ListNode * const check_point) {
 // Fail if any any blocks are allocated after the specified check point.
 static void fail_if_blocks_allocated(const ListNode * const check_point,
                               const char * const test_name) {
-    const int allocated_blocks = display_allocated_blocks(check_point);
-    if (allocated_blocks) {
-        free_allocated_blocks(check_point);
-        print_error("ERROR: %s leaked %d block(s)\n", test_name,
-                    allocated_blocks);
-        exit_test(1);
+    try {
+        const int allocated_blocks = display_allocated_blocks(check_point);
+        if (allocated_blocks) {
+            free_allocated_blocks(check_point);
+            print_error("ERROR: %s leaked %d block(s)\n", test_name,
+                        allocated_blocks);
+            throw memory_leak();
+        }
     }
+    catch (memory_leak& e) {
+        std::cerr<<e.what();
+    }
+//    const int allocated_blocks = display_allocated_blocks(check_point);
+//    if (allocated_blocks) {
+//        free_allocated_blocks(check_point);
+//        print_error("ERROR: %s leaked %d block(s)\n", test_name,
+//                    allocated_blocks);
+//        exit_test(1);
+//    }
 }
 //把当前测试函数对应的参数和结果从对应的队列中删除，并声明返回的最后一个模拟值和检查的参数的值
 void teardown_testing(const char *const name) {
+    (void )name;
   list_free(&global_function_result_map_head, free_symbol_map_value,
             (void*)0);
   initialize_source_location(&global_last_mock_value_location);
@@ -900,7 +915,10 @@ static int get_symbol_value(ListNode *const head, const char *const *symbol_name
     return 0;
 
 }
-
+/*
+ * @retval rc = 1，这个测试失败
+ * @retval rc = 0,测试成功
+ */
 int _run_test(
         const char * const function_name, const UnitTestFunction Function,
         void ** const state, const UnitTestFunctionType function_type,
@@ -925,7 +943,44 @@ int _run_test(
     }
     initialize_testing(function_name);
     global_running_test = 1;
-    if (setjmp(global_run_test_env) == 0) {
+    //setjmp!=0:
+    try{
+        struct timeval time_start, time_end;
+        gettimeofday(&time_start, NULL);
+
+        // Execute test
+        Function(state ? state : &current_state);
+
+        // Collect time data
+        gettimeofday(&time_end, NULL);
+        //print_message("[--test took %d --]",(time_end.tv_sec-time_start.tv_sec)*1000.0
+        //                                    + (time_end.tv_usec-time_start.tv_usec)/1000.0);
+
+        fail_if_leftover_values(function_name);
+
+        /* If this is a setup function then ignore any allocated blocks
+         * only ensure they're deallocated on tear down. */
+        if (function_type != UNIT_TEST_FUNCTION_TYPE_SETUP) {
+            fail_if_blocks_allocated(check_point, function_name);
+        }
+
+        global_running_test = 0;
+
+        if (function_type == UNIT_TEST_FUNCTION_TYPE_TEST) {
+            print_message("[       OK ] %s\n", function_name);
+        }
+        rc = 0;
+    }catch (std::exception &e) {
+        global_running_test = 0;//标记当前并无测试正在运行
+
+        std::cerr<<e.what()<<std::endl;
+        print_message("[  FAILED  ] %s\n", function_name);
+    }
+    catch (...) {
+        global_running_test = 0;//标记当前并无测试正在运行
+        print_message("[  FAILED  ] %s\n", function_name);
+    }
+/*    if (setjmp(global_run_test_env) == 0) {
         struct timeval time_start, time_end;
         gettimeofday(&time_start, NULL);
 
@@ -938,10 +993,10 @@ int _run_test(
         //检查是否已经将全部参数和返回值测试完
         fail_if_leftover_values(function_name);
 
-        /* 如果这是一个设置函数，则忽略任何分配的块，仅确保它们在拆卸时被释放
+        *//* 如果这是一个设置函数，则忽略任何分配的块，仅确保它们在拆卸时被释放
          * 如果不是，检测是否发生内存泄漏
          * If this is a setup function then ignore any allocated blocks
-         * only ensure they're deallocated on tear down. */
+         * only ensure they're deallocated on tear down. *//*
         if (function_type != UNIT_TEST_FUNCTION_TYPE_SETUP) {
             fail_if_blocks_allocated(check_point, function_name);
         }
@@ -955,13 +1010,13 @@ int _run_test(
     } else {
         global_running_test = 0;
         ///TODO:新的一种测试类型
-       /* if(UNIT_TEST_FUNCTION_TYPE_TEST_EXPECT_FAILURE == function_type) {
+       *//* if(UNIT_TEST_FUNCTION_TYPE_TEST_EXPECT_FAILURE == function_type) {
             rc = 0;
             print_message("[EXPCT FAIL] %s\n", function_name);
-        } else {)*/
+        } else {)*//*
 
         print_message("[  FAILED  ] %s\n", function_name);
-    }
+    }*/
     teardown_testing(function_name);
 
     return rc;
@@ -983,12 +1038,16 @@ int _run_tests(const UnitTest * const tests, const size_t number_of_tests) {
     size_t setups = 0;
     // Number of teardown functions.拆解功能的数量
     size_t teardowns = 0;
+    // Collect Xunit data
+    struct timeval time_start, time_end;
     /* A stack of test states.  A state is pushed on the stack
      * when a test setup occurs and popped on tear down. */
-    /// TODO: 实现使用new操作符的auto test_states = new TestState[number_of_tests];
+
     size_t number_of_test_states = 0;
-    TestState* test_states = static_cast<TestState *>(
-        malloc(number_of_tests * sizeof(*test_states)));
+    /// TODO: 实现使用new操作符的auto test_states = new TestState[number_of_tests];
+    auto test_states = std::make_unique<TestState[]>(number_of_tests);
+//    TestState* test_states = static_cast<TestState *>(
+//        malloc(number_of_tests * sizeof(*test_states)));
     // Names of the tests that failed.
     std::vector<std::string> failed_names(number_of_tests);
     void **current_state = nullptr;
@@ -997,7 +1056,8 @@ int _run_tests(const UnitTest * const tests, const size_t number_of_tests) {
 
     // Make sure LargestIntegralType is at least the size of a pointer.
     assert_true(sizeof(LargestIntegralType) >= sizeof(void*));
-
+    // Start testsuite timer
+    gettimeofday(&time_start, NULL);
     while (current_test < number_of_tests) { //通过循环完成所有测试
         const ListNode *test_check_point = nullptr;
         TestState *current_TestState;
@@ -1072,6 +1132,7 @@ int _run_tests(const UnitTest * const tests, const size_t number_of_tests) {
             }
         }
     }
+    gettimeofday(&time_end, NULL);
     if (total_failed) {
       size_t i;
       print_error("%d out of %d tests failed!\n", total_failed,
@@ -1082,6 +1143,7 @@ int _run_tests(const UnitTest * const tests, const size_t number_of_tests) {
     } else {
       print_message("All %d tests passed\n", tests_executed);
     }
+    print_message("All tests took %d(μs)\n",time_end.tv_usec-time_start.tv_usec);
     return (int)total_failed;
 }
 
@@ -1221,14 +1283,21 @@ void _check_expected(
 //替换assert
 void mock_assert(const int result, const char* const expression,
                  const char * const file, const int line) {
-  if (!result) {
-    if (global_expecting_assert) {
-      longjmp(global_expect_assert_env, (LargestIntegralType)expression);
-    } else {
-      print_error("ASSERT: %s\n", expression);
-      _fail(file, line);
+//  if (!result) {
+//    if (global_expecting_assert) {
+//      longjmp(global_expect_assert_env, (LargestIntegralType)expression);
+//    } else {
+//      print_error("ASSERT: %s\n", expression);
+//      _fail(file, line);
+//    }
+    try{//
+        if(!result)
+            throw static_cast<std::string >("assert: " )+ expression;
+    } catch (std::string &e) {
+        print_error("MACK_ASSERT Fail in %s:%d\n", file,line);
+        throw;
     }
-  }
+  //}
 }
 
 //函数对应的返回值由value指出，存储到global_function_result_map_head中去
@@ -1266,7 +1335,7 @@ void _assert_int_equal(
     if(a!=b) {
       print_error(LargestIntegralTypePrintfFormat " != "
                   LargestIntegralTypePrintfFormat "\n", a, b);
-      _fail(file, line);
+        throw assert_fail("two int was not equal;");
     }
 }
 void _assert_int_not_equal(
@@ -1282,7 +1351,7 @@ void _assert_string_equal(const char * const a, const char * const b,
                           const char * const file, const int line) {
   if(strcmp(a,b)!=0) {
     print_error("\"%s\" != \"%s\"\n", a, b);
-    _fail(file,line);
+    throw assert_fail("string don`s equal");
   }
 
 }
@@ -1290,9 +1359,8 @@ void _assert_string_not_equal(const char * const a, const char * const b,
                               const char *file, const int line) {
   if(strcmp(a,b)==0) {
     print_error("\"%s\" == \"%s\"\n", a, b);
-    _fail(file,line);
+    throw assert_fail("tring was equal but expect was not;");
   }
-  print_error("\"%s\" == \"%s\"\n", a, b);
 }
 // Use the real malloc in this function.
 #undef malloc   //TODO: 新建一个_test_new测试函数
@@ -1418,11 +1486,11 @@ void _test_free(void* const ptr, const char* file, const int line) {
     unsigned int i;
     char *block = (char*)ptr;
     MallocBlockInfo *block_info;
-    _assert_true(reinterpret_cast<LargestIntegralType>(&ptr), "ptr", file, line);
+    _assert_true(cast_ptr_to_largest_integral_type(&ptr), "ptr", file, line);
     block_info = (MallocBlockInfo*)(block - (MALLOC_GUARD_SIZE +
                                                 sizeof(*block_info)));
     // Check the guard blocks.
-    {
+    try {
         char *guards[2] = {block - MALLOC_GUARD_SIZE,
                            block + block_info->size};
         for (i = 0; i < ARRAY_LENGTH(guards); i++) {
@@ -1430,17 +1498,23 @@ void _test_free(void* const ptr, const char* file, const int line) {
             char * const guard = guards[i];
             for (j = 0; j < MALLOC_GUARD_SIZE; j++) {
                 const char diff = guard[j] - MALLOC_GUARD_PATTERN;
-                if (diff) {
-                    print_error(
-                            "Guard block of 0x%08x size=%d allocated by "
-                            SOURCE_LOCATION_FORMAT " at 0x%08x is corrupt\n",
-                            (size_t)ptr, block_info->size,
-                            block_info->location.file, block_info->location.line,
-                            (size_t)&guard[j]);
-                    _fail(file, line);
+                if (diff!='0') {
+//                    print_error(
+//                            "Guard block of 0x%08x size=%d allocated by "
+//                            SOURCE_LOCATION_FORMAT " at 0x%08x is corrupt\n",
+//                            (size_t)ptr, block_info->size,
+//                            block_info->location.file, block_info->location.line,
+//                            (size_t)&guard[j]);
+                    throw memory_err();
+                    //_fail(file, line);
                 }
             }
         }
+    }
+    catch (memory_err & e) {
+        std::cerr<<e.what()<<" occer in "<<block_info->location.file
+        <<':'<<block_info->location.line<<std::endl;
+        throw ;
     }
     list_remove(&block_info->node, NULL, NULL);
 
@@ -1449,6 +1523,7 @@ void _test_free(void* const ptr, const char* file, const int line) {
     free(block);
 }
 #define free test_free
+
 //调用_test_malloc
 void* _test_calloc(const size_t number_of_elements, const size_t size,
                    const char* file, const int line) {
@@ -1465,7 +1540,4 @@ void _fail(const char * const file, const int line) {
     exit_test(1);
 }
 
-void * malloc_test(const size_t number_of_elements, const size_t size,\
-                        const char* file, const int line) {
-    return NULL;
 }

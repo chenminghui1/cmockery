@@ -21,6 +21,7 @@
 #include <stddef.h>
 #include "../include/cmockery.h"
 
+using namespace ctest;
 // A test case that does nothing and succeeds.
 void null_test_success(void **state) {
   std::cout << "hello testing!" << std::endl;

@@ -227,6 +227,30 @@ answer：需要。在C++中，如果将内联函数的实现和声明分开，�
     仅仅返回已经申请好内存的指针，它通常应用在对效率要求高的场景下，提前申请好内存，能够节省申请内存过程中耗费的时间。
     ![img.png](doc_source/placement_new.png)
 
+### 调用另一个文件namespace里面定义的内容
+在文件`allocate_module.cpp`中，在cmockery没有定义namespace ctest时，原本使用报错无法找到。
+```c++
+extern void* _test_malloc(const size_t size, const char* file, const int line);
+extern void* _test_calloc(const size_t number_of_elements, const size_t size,
+                          const char* file, const int line);
+extern void _test_free(void* const ptr, const char* file, const int line);
+```
+此时需要
+```c++
+namespace ctest{
+extern void* _test_malloc(const size_t size, const char* file, const int line);
+extern void* _test_calloc(const size_t number_of_elements, const size_t size,
+                          const char* file, const int line);
+extern void _test_free(void* const ptr, const char* file, const int line);
+}
+
+//此时就可以使用namespace：：funcion调用了；
+void leak_memory() {
+    int * const temporary = (int*)ctest::malloc(sizeof(int));
+    *temporary = 0;
+}
+
+```
 
 
 

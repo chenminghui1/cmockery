@@ -18,11 +18,12 @@
 #include <stddef.h>
 #include "../include/cmockery.h"
 
-
-
 extern void leak_memory();
 extern void buffer_overflow();
 extern void buffer_underflow();
+
+
+using namespace ctest;
 
 // Test case that fails as leak_memory() leaks a dynamically-allocated block.
 void leak_memory_test(void **state) {

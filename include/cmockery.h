@@ -28,7 +28,7 @@
  */
 
 #include "ctest_port.h"
-
+namespace ctest {
 // For those who are used to __func__ from gcc.
 #ifndef __func__
 #define __func__ __FUNCTION__
@@ -46,16 +46,26 @@
 
 // Printf format used to display LargestIntegralType.
 #ifndef LargestIntegralTypePrintfFormat
-#ifdef _WIN32
-#define LargestIntegralTypePrintfFormat "%I64x"
-#else
 #define LargestIntegralTypePrintfFormat "%llx"
-#endif // _WIN32
 #endif // LargestIntegralTypePrintfFormat
 
 // Perform an unsigned cast to LargestIntegralType.
 #define cast_to_largest_integral_type(value) \
     ((LargestIntegralType)(value))
+/* Smallest integral type capable of holding a pointer. */
+#ifndef _UINTPTR_T
+#define _UINTPTR_T
+/* 在64位环境下，指针和long类型都是8字节 */
+typedef unsigned long uintptr_t;
+#endif//_UINTPTR_T
+
+/* Perform an unsigned cast to uintptr_t. */
+#define cast_to_pointer_integral_type(value) \
+	((uintptr_t)(value))
+
+/* Perform a cast of a pointer to uintmax_t */
+#define cast_ptr_to_largest_integral_type(value) \
+cast_to_largest_integral_type(cast_to_pointer_integral_type(value))
 
 // Retrieves a return value for the current function.检索当前函数的返回值
 #define mock() _mock(__func__, __FILE__, __LINE__)
@@ -264,7 +274,9 @@
     { #test "_" #setup, setup, UNIT_TEST_FUNCTION_TYPE_SETUP }
 #define unit_test_teardown(test, teardown) \
     { #test "_" #teardown, teardown, UNIT_TEST_FUNCTION_TYPE_TEARDOWN }
-
+// Used only for cmockery internal tests
+#define unit_test_expect_failure(f) \
+    { #f, f, UNIT_TEST_FUNCTION_TYPE_TEST_EXPECT_FAILURE}
 /* Initialize an array of UnitTest structures with a setup function for a test
  * and a teardown function.  Either setup or teardown can be NULL.
  */
@@ -326,23 +338,36 @@
  *   return 0;
  * }
  */
+//#define expect_assert_failure(function_call) \
+//  { \
+//    const int expression = setjmp(global_expect_assert_env); \
+//    global_expecting_assert = 1; \
+//    if (expression) { \
+//      print_message("Expected assertion %s occurred\n", \
+//                    *((const char**)&expression)); \
+//      global_expecting_assert = 0; \
+//    } else { \
+//      function_call ; \
+//      global_expecting_assert = 0; \
+//      print_error("Expected assert in %s\n", #function_call); \
+//      _fail(__FILE__, __LINE__); \
+//    } \
+//  }
+
 #define expect_assert_failure(function_call) \
-  { \
-    const int expression = setjmp(global_expect_assert_env); \
-    global_expecting_assert = 1; \
-    if (expression) { \
-      print_message("Expected assertion %s occurred\n", \
-                    *((const char**)&expression)); \
-      global_expecting_assert = 0; \
-    } else { \
-      function_call ; \
-      global_expecting_assert = 0; \
-      print_error("Expected assert in %s\n", #function_call); \
-      _fail(__FILE__, __LINE__); \
-    } \
-  }
-
-
+    {                                             \
+        try{                              \
+            function_call    ;                 \
+            global_expecting_assert = 0;      \
+            print_error("Expected assert in %s\n", #function_call); \
+            }                                 \
+        catch (...){                      \
+            print_message("Expected assertion %s occurred\n" \
+                    ); \
+            global_expecting_assert = 0;     \
+                                   \
+            }\
+    }
 //函数对象
 // Function prototype for setup, test and teardown functions.
 typedef void (*UnitTestFunction)(void **state);
@@ -355,6 +380,7 @@ enum UnitTestFunctionType {
     UNIT_TEST_FUNCTION_TYPE_TEST = 0,
     UNIT_TEST_FUNCTION_TYPE_SETUP,
     UNIT_TEST_FUNCTION_TYPE_TEARDOWN,
+    UNIT_TEST_FUNCTION_TYPE_TEST_EXPECT_FAILURE,
 } ;
 
 /* Stores a unit test function with its name and type.
@@ -521,5 +547,5 @@ void print_message(const char* const format, ...);
 void print_error(const char* const format, ...);
 void vprint_message(const char* const format, va_list args);
 void vprint_error(const char* const format, va_list args);
-
+}
 #endif // CMOCKERY_H_
