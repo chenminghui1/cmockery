@@ -19,7 +19,7 @@
 #include "../include/cmockery.h"
 
 
-
+using namespace ctest;
 //让编译器知道需要在外部文件中查找函数
 extern void increment_value(int * const value);
 extern void decrement_value(int * const value);

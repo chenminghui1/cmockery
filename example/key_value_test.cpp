@@ -18,7 +18,7 @@
 #include <setjmp.h>
 #include <string.h>
 #include "../include/cmockery.h"
-
+using namespace ctest;
 /* This is duplicated here from the module setup_teardown.c to reduce the
  * number of files used in this test. */
 typedef struct KeyValue {

@@ -850,13 +850,6 @@ static void fail_if_blocks_allocated(const ListNode * const check_point,
     catch (memory_leak& e) {
         std::cerr<<e.what();
     }
-//    const int allocated_blocks = display_allocated_blocks(check_point);
-//    if (allocated_blocks) {
-//        free_allocated_blocks(check_point);
-//        print_error("ERROR: %s leaked %d block(s)\n", test_name,
-//                    allocated_blocks);
-//        exit_test(1);
-//    }
 }
 //把当前测试函数对应的参数和结果从对应的队列中删除，并声明返回的最后一个模拟值和检查的参数的值
 void teardown_testing(const char *const name) {
@@ -1371,7 +1364,9 @@ void* _test_malloc(const size_t size, const char* file, const int line)  {
   ListNode * const block_list = get_allocated_blocks_list();
   const size_t allocate_size = size + (MALLOC_GUARD_SIZE * 2) +
                                 sizeof(*block_info) + MALLOC_ALIGNMENT;
+
   char* const block = (char*)malloc(allocate_size);
+        try {
   assert_true(block);
 
   // Calculate the returned address.
@@ -1384,7 +1379,10 @@ void* _test_malloc(const size_t size, const char* file, const int line)  {
   //memset将一段内存设置为指定的值
   memset(ptr + size, MALLOC_GUARD_PATTERN, MALLOC_GUARD_SIZE);
   memset(ptr, MALLOC_ALLOC_PATTERN, size);
-
+  }
+  catch (std::exception &e) {
+      print_error("malloc failed: %s", e.what());
+  }
   block_info = (MallocBlockInfo*)(ptr - (MALLOC_GUARD_SIZE +
                                           sizeof(*block_info)));
   set_source_location(&block_info->location, file, line);
@@ -1484,7 +1482,7 @@ void _test_delete(void* const ptr, const char* file, const int line) {
 #undef free
 void _test_free(void* const ptr, const char* file, const int line) {
     unsigned int i;
-    char *block = (char*)ptr;
+    char *block = (char*)ptr; //每一位执行
     MallocBlockInfo *block_info;
     _assert_true(cast_ptr_to_largest_integral_type(&ptr), "ptr", file, line);
     block_info = (MallocBlockInfo*)(block - (MALLOC_GUARD_SIZE +
@@ -1498,15 +1496,8 @@ void _test_free(void* const ptr, const char* file, const int line) {
             char * const guard = guards[i];
             for (j = 0; j < MALLOC_GUARD_SIZE; j++) {
                 const char diff = guard[j] - MALLOC_GUARD_PATTERN;
-                if (diff!='0') {
-//                    print_error(
-//                            "Guard block of 0x%08x size=%d allocated by "
-//                            SOURCE_LOCATION_FORMAT " at 0x%08x is corrupt\n",
-//                            (size_t)ptr, block_info->size,
-//                            block_info->location.file, block_info->location.line,
-//                            (size_t)&guard[j]);
+                if (diff) { //如果diff不为0，说明内存已经被修改,而之前使用diff=='0'来判断是错的，因为‘0’的ASCII码为48
                     throw memory_err();
-                    //_fail(file, line);
                 }
             }
         }

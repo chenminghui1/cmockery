@@ -20,7 +20,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include "../include/cmockery.h"
-
+using namespace ctest;
 #define array_length(x) (sizeof(x) / sizeof((x)[0]))
 
 /* To simplify this code, these functions and data structures could have been

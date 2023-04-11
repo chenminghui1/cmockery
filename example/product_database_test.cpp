@@ -18,7 +18,7 @@
 #include <setjmp.h>
 #include "../include/cmockery.h"
 #include "database.h"
-
+using namespace ctest;
 extern DatabaseConnection* connect_to_product_database();
 
 /* Mock connect to database function.

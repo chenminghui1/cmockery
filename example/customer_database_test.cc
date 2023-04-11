@@ -18,7 +18,7 @@
 #include <setjmp.h>
 #include "../include/cmockery.h"
 #include "database.h"
-
+using namespace ctest;
 extern DatabaseConnection* connect_to_customer_database();
 extern unsigned int get_customer_id_by_name(
     DatabaseConnection * const connection, const char * const customer_name);

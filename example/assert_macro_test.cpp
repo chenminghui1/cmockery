@@ -18,7 +18,7 @@
 #include <cstdarg>
 #include <cstddef>
 #include "../include/cmockery.h"
-
+using namespace ctest;
 extern const char *get_status_code_string(const unsigned int status_code);
 extern unsigned int string_to_status_code(const char *const status_code_string);
 
