@@ -28,6 +28,7 @@
  */
 
 #include "ctest_port.h"
+#include "ctest_exception.h"
 namespace ctest {
 // For those who are used to __func__ from gcc.
 #ifndef __func__
@@ -198,7 +199,7 @@ cast_to_largest_integral_type(cast_to_pointer_integral_type(value))
 // 断言给定的表达式为假.
 #define assert_false(c) _assert_false((cast_to_largest_integral_type(c)), #c, \
                                     __FILE__, __LINE__)
-
+#define asssert_not_null(c) _assert_not_null(c, #c, __FILE__, __LINE__)
 // Assert that the two given integers are equal, otherwise fail.
 #define assert_int_equal(a, b) \
     _assert_int_equal(cast_to_largest_integral_type(a), \
@@ -355,17 +356,20 @@ cast_to_largest_integral_type(cast_to_pointer_integral_type(value))
 //  }
 
 #define expect_assert_failure(function_call) \
-    {                                             \
+    {                                        \
+        global_expecting_assert = 1;        \
         try{                              \
             function_call    ;                 \
             global_expecting_assert = 0;      \
             print_error("Expected assert in %s\n", #function_call); \
-            }                                 \
+            throw bad_expect_fail();                                 \
+            }                                \
+            catch (bad_expect_fail &e) {          \
+            throw;}\
         catch (...){                      \
             print_message("Expected assertion %s occurred\n" \
-                    ); \
+                    #function_call); \
             global_expecting_assert = 0;     \
-                                   \
             }\
     }
 //函数对象
@@ -496,6 +500,7 @@ void _assert_true(const LargestIntegralType result,
 void _assert_false(const LargestIntegralType result,
                   const char* const expression,
                   const char * const file, const int line);
+void _assert_not_null(void *c, const char expression, const char * const file, const int line);
 void _assert_int_equal(
     const LargestIntegralType a, const LargestIntegralType b,
     const char * const file, const int line);

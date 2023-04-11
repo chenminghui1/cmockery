@@ -362,7 +362,7 @@ static void add_symbol_value(ListNode * const symbol_map_head,
   if (!list_find(symbol_map_head, symbol_name, symbol_names_match,
                  &target_node)) {
     SymbolMapValue * const new_symbol_map_value =static_cast<SymbolMapValue *>(
-        malloc(sizeof(*new_symbol_map_value)));
+        malloc(sizeof(new_symbol_map_value)));
     new_symbol_map_value->symbol_name = symbol_name;
     list_initialize(&new_symbol_map_value->symbol_values_list_head);
     target_node = list_add_value(symbol_map_head, new_symbol_map_value,
@@ -848,7 +848,8 @@ static void fail_if_blocks_allocated(const ListNode * const check_point,
         }
     }
     catch (memory_leak& e) {
-        std::cerr<<e.what();
+        //std::cerr<<e.what();
+        throw;
     }
 }
 //把当前测试函数对应的参数和结果从对应的队列中删除，并声明返回的最后一个模拟值和检查的参数的值
@@ -1160,6 +1161,7 @@ void _expect_check(
     const CheckParameterValue check_function,
     const LargestIntegralType check_data, CheckParameterEvent * const event,
     const int count) {
+    ///如果事件参数为 NULL，则事件结构由此函数在内部分配。
   CheckParameterEvent * const check =
       event ? event : static_cast<CheckParameterEvent *>(malloc(sizeof(*check)));
   const char* symbols[] = {function, parameter};
@@ -1285,10 +1287,13 @@ void mock_assert(const int result, const char* const expression,
 //    }
     try{//
         if(!result)
-            throw static_cast<std::string >("assert: " )+ expression;
-    } catch (std::string &e) {
+            throw expression;
+    } catch (assert_fail &e) {
         print_error("MACK_ASSERT Fail in %s:%d\n", file,line);
         throw;
+    }
+    catch (...) {
+        throw ;
     }
   //}
 }
@@ -1309,9 +1314,13 @@ void _will_return(const char * const function_name, const char * const file,
 void _assert_true(const LargestIntegralType result,
                     const char * const expression,
                     const char * const file, const int line) {
-    if (!result) {
-        print_error("expected '%s' to be true\n", expression);
-        _fail(file, line);
+    try {
+        if (!result) {
+            throw assert_fail("assert_true");
+        }
+    } catch (assert_fail &e) {
+        print_error("ASSERT Fail in %s:%d\n", file,line);
+        throw;
     }
 }
 void _assert_false(const LargestIntegralType result,
@@ -1322,13 +1331,32 @@ void _assert_false(const LargestIntegralType result,
         _fail(file, line);
     }
 }
+    void _assert_not_null(void *c, const char expression, const char * const file, const int line) {
+    if(c==NULL||c== nullptr) {
+        print_error("expected '%s' to be not null\n", expression);
+        _fail(file, line);
+    }
+}
+template <typename T>
+void _assert_equal(const T a, const T b,
+                   const char * const file, const int line) {
+    if(a!=b) {
+        print_error("%d != %d\n", a, b);
+        _fail(file, line);
+    }
+}
+
 void _assert_int_equal(
     const LargestIntegralType a, const LargestIntegralType b,
     const char * const file, const int line) {
-    if(a!=b) {
-      print_error(LargestIntegralTypePrintfFormat " != "
-                  LargestIntegralTypePrintfFormat "\n", a, b);
-        throw assert_fail("two int was not equal;");
+    try {
+        if(a!=b) {
+            throw assert_fail("two int was not equal;");
+        }
+    } catch (assert_fail &e) {
+        print_error(LargestIntegralTypePrintfFormat " != "
+                    LargestIntegralTypePrintfFormat "\n", a, b);
+        throw;
     }
 }
 void _assert_int_not_equal(
@@ -1366,25 +1394,25 @@ void* _test_malloc(const size_t size, const char* file, const int line)  {
                                 sizeof(*block_info) + MALLOC_ALIGNMENT;
 
   char* const block = (char*)malloc(allocate_size);
-        try {
-  assert_true(block);
+  try {
+      assert_true(block);
+      // Calculate the returned address.
+      //这段代码的作用是将block指针加上一定的偏移量，并将结果向下舍入到MALLOC_ALIGNMENT的倍数。
+      ptr = (char*)(((size_t)block + MALLOC_GUARD_SIZE + sizeof(*block_info) +
+                      MALLOC_ALIGNMENT) & ~(MALLOC_ALIGNMENT - 1));
 
-  // Calculate the returned address.
-  //这段代码的作用是将block指针加上一定的偏移量，并将结果向下舍入到MALLOC_ALIGNMENT的倍数。
-  ptr = (char*)(((size_t)block + MALLOC_GUARD_SIZE + sizeof(*block_info) +
-                  MALLOC_ALIGNMENT) & ~(MALLOC_ALIGNMENT - 1));
-
-  // Initialize the guard blocks.
-  memset(ptr - MALLOC_GUARD_SIZE, MALLOC_GUARD_PATTERN, MALLOC_GUARD_SIZE);
-  //memset将一段内存设置为指定的值
-  memset(ptr + size, MALLOC_GUARD_PATTERN, MALLOC_GUARD_SIZE);
-  memset(ptr, MALLOC_ALLOC_PATTERN, size);
+      // Initialize the guard blocks.
+      memset(ptr - MALLOC_GUARD_SIZE, MALLOC_GUARD_PATTERN, MALLOC_GUARD_SIZE);
+      //memset将一段内存设置为指定的值
+      memset(ptr + size, MALLOC_GUARD_PATTERN, MALLOC_GUARD_SIZE);
+      memset(ptr, MALLOC_ALLOC_PATTERN, size);
+      block_info = (MallocBlockInfo*)(ptr - (MALLOC_GUARD_SIZE +
+                                    sizeof(*block_info)));
   }
   catch (std::exception &e) {
       print_error("malloc failed: %s", e.what());
   }
-  block_info = (MallocBlockInfo*)(ptr - (MALLOC_GUARD_SIZE +
-                                          sizeof(*block_info)));
+
   set_source_location(&block_info->location, file, line);
   block_info->allocated_size = allocate_size;
   block_info->size = size;
@@ -1485,8 +1513,10 @@ void _test_free(void* const ptr, const char* file, const int line) {
     char *block = (char*)ptr; //每一位执行
     MallocBlockInfo *block_info;
     _assert_true(cast_ptr_to_largest_integral_type(&ptr), "ptr", file, line);
+    ///在malloc时分配地址会吧block_info放在ptr前面，所以这里要减去block_info的大小
     block_info = (MallocBlockInfo*)(block - (MALLOC_GUARD_SIZE +
                                                 sizeof(*block_info)));
+
     // Check the guard blocks.
     try {
         char *guards[2] = {block - MALLOC_GUARD_SIZE,

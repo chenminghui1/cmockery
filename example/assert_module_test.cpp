@@ -26,8 +26,7 @@ extern void decrement_value(int * const value);
 /* This test case will fail, but the assert is caught by run_tests() and the
  * next test is executed. */
 void increment_value_fail(void **state) {
-    int* a = static_cast<int*>(new(1));
-    increment_value(a);
+    increment_value(nullptr);
 }
 
 // This test case succeeds since increment_value() asserts on the NULL pointer.
@@ -39,7 +38,7 @@ void increment_value_assert(void **state) {
 /* This test case fails since decrement_value() doesn't assert on a NULL
  * pointer. */
 void decrement_value_fail(void **state) {
-    int* a = static_cast<int*>(new(1));
+    int* a = nullptr;
     expect_assert_failure(decrement_value(a));
 }
 
