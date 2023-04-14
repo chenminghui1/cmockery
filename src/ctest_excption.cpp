@@ -21,5 +21,7 @@ const char * assert_fail::what() const throw() {
 const char * bad_expect_fail::what() const throw() {
     return "expect fail but success";
 }
-
+const char * sig_err::what() const throw() {
+    return sig_str;
+}
 } //namespace ctest

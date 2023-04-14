@@ -12,6 +12,8 @@
 #include <csignal>
 #include <cstring>
 #include <sys/time.h>
+#include <thread>
+#include <future>
 #include "../include/cmockery.h"
 #include "../include/ctest_assert.h"
 #include "../include/ctest_exception.h"
@@ -199,7 +201,8 @@ struct CheckIntegerSet {
   size_t size_of_set;
 } ;
 
-/* Used to check whether a parameter matches the area of memory referenced by
+/* 用于检查参数是否与此结构引用的内存区域匹配。
+ * Used to check whether a parameter matches the area of memory referenced by
  * this structure.  */
 typedef struct CheckMemoryData {
   CheckParameterEvent event;
@@ -362,7 +365,7 @@ static void add_symbol_value(ListNode * const symbol_map_head,
   if (!list_find(symbol_map_head, symbol_name, symbol_names_match,
                  &target_node)) {
     SymbolMapValue * const new_symbol_map_value =static_cast<SymbolMapValue *>(
-        malloc(sizeof(new_symbol_map_value)));
+        malloc(sizeof(*new_symbol_map_value))); ///new_symbol_map_value大小是320,因此导致了malloc的内存不足
     new_symbol_map_value->symbol_name = symbol_name;
     list_initialize(&new_symbol_map_value->symbol_values_list_head);
     target_node = list_add_value(symbol_map_head, new_symbol_map_value,
@@ -443,7 +446,7 @@ int global_expecting_assert = 0;
 // 如果之前没有保存成功，则调用exit(-1)函数退出测试
 static void exit_test(const int quit_application) {
     if (global_running_test) { //如果是被测程序出现错误，恢复测试测序开始之前的状态，不退出测试，否则
-        longjmp(global_run_test_env, 1);//用于恢复之前由setjmp保存的栈环境和执行位置
+        throw ;//用于恢复之前由setjmp保存的栈环境和执行位置
         //并传入一个全局变量global_run_test_env作为保存环境的对象，以及一个整数1作为从setjmp返回的值。
         // 这意味着程序会跳转到之前调用setjmp并保存global_run_test_env对象的地方，并从setjmp返回1。
     } else if (quit_application) {
@@ -590,7 +593,7 @@ static int integer_not_in_range_display_error(
  * returned. */
 static int string_equal_display_error(
     const char * const left, const char * const right) {
-  if (strcmp(left, right) == 0) {  ///TODO:使用compare实现字符串的比较
+  if (strcmp(left, right) == 0) {  ///
     return 1;
   }
   print_error("\"%s\" != \"%s\"\n", left, right);
@@ -670,38 +673,13 @@ static int memory_not_equal_display_error(
 
 static void exception_handler(int sig) {
     print_error("%s\n", strsignal(sig));///strsignal回去sig的描述性信息
-    exit_test(1);
+    if(global_running_test)
+        throw sig_err(strsignal(sig));
+    exit(-1);
 }
 
-int _run_test(
-        const std::string  function_name, const UnitTestFunction Function,
-        void ** const state, const UnitTestFunctionType function_type,
-        const void* const heap_check_point) {
-    const ListNode * const check_point = static_cast<const ListNode *>(heap_check_point ?
-                                            heap_check_point : check_point_allocated_blocks());
-    void *current_state = NULL;
-    int rc = 1;
-    int handle_exceptions = 1;
-#if UNIT_TESTING_DEBUG
-    handle_exceptions = 0;
-#endif // UNIT_TESTING_DEBUG
 
-    if (handle_exceptions) {
-        unsigned int i;
-        for (i = 0; i < ARRAY_LENGTH(exception_signals); i++) {
-            default_signal_functions[i] = signal(
-                    exception_signals[i], exception_handler);
-        }
-    }
-    //输出提示信息
-    if (function_type == UNIT_TEST_FUNCTION_TYPE_TEST) {
-        std::cout<<function_name<<": Starting test\n";
-    }
-    initialize_testing(function_name.c_str());
-    return rc;
-}
 
-#undef malloc
 
 void fail_if_leftover_values(const char *const name) {
     int error_occurred = 0;//标记是否发生错误
@@ -913,10 +891,8 @@ static int get_symbol_value(ListNode *const head, const char *const *symbol_name
  * @retval rc = 1，这个测试失败
  * @retval rc = 0,测试成功
  */
-int _run_test(
-        const char * const function_name, const UnitTestFunction Function,
-        void ** const state, const UnitTestFunctionType function_type,
-        const void* const heap_check_point) {
+    void _run_test(const char *const function_name, const UnitTestFunction Function, void **const state,
+                   const UnitTestFunctionType function_type, const void *const heap_check_point, int &failed) {
     const ListNode * const check_point = heap_check_point ?
                   static_cast<const ListNode *>(heap_check_point): check_point_allocated_blocks();
     void *current_state = NULL;
@@ -972,7 +948,7 @@ int _run_test(
     }
     catch (...) {
         global_running_test = 0;//标记当前并无测试正在运行
-        print_message("[  FAILED  ] %s\n", function_name);
+        print_message("\n[  FAILED  ] %s\n", function_name);
     }
 /*    if (setjmp(global_run_test_env) == 0) {
         struct timeval time_start, time_end;
@@ -1003,7 +979,7 @@ int _run_test(
         rc = 0;
     } else {
         global_running_test = 0;
-        ///TODO:新的一种测试类型
+        ///
        *//* if(UNIT_TEST_FUNCTION_TYPE_TEST_EXPECT_FAILURE == function_type) {
             rc = 0;
             print_message("[EXPCT FAIL] %s\n", function_name);
@@ -1013,7 +989,7 @@ int _run_test(
     }*/
     teardown_testing(function_name);
 
-    return rc;
+    failed= rc;
 }
 int _run_tests(const UnitTest * const tests, const size_t number_of_tests) {
     // 是否执行下一个测试
@@ -1090,8 +1066,15 @@ int _run_tests(const UnitTest * const tests, const size_t number_of_tests) {
                 break;
         }
         if (run_next_test) {
-            int failed = _run_test(test->name, test->function, current_state,\
-                                    test->function_type, test_check_point);
+            int failed = 0;
+            std::thread MyTestThread(_run_test,test->name, test->function, current_state, \
+                                                  test->function_type, test_check_point, std::ref(failed));
+         //todo：现在使用join将线程阻塞，实际上和之前单线程执行的效果是一样的
+         //为了真正实现多线程，需要将join注释掉，通过在run_test中操作全局变量，实现多线程，加快测试程序的执行速度。
+            if(MyTestThread.joinable())
+            {
+                MyTestThread.join();
+            }
             if (failed) {
                 auto testname = test->name;
                 failed_names[total_failed] = testname;
@@ -1148,6 +1131,16 @@ static int check_string(const LargestIntegralType value,
       cast_largest_integral_type_to_pointer(char*, value),
       cast_largest_integral_type_to_pointer(char*, check_value_data));
 }
+
+/* CheckParameterValue callback to check whether a parameter is not equals to
+ * a string. */
+static int check_not_string(const LargestIntegralType value,
+            const LargestIntegralType check_value_data) {
+return string_not_equal_display_error(
+        cast_largest_integral_type_to_pointer(char *,value),
+cast_largest_integral_type_to_pointer(char*, check_value_data));
+}
+
 /* 添加自定义参数检查功能。如果事件参数为 NULL，则事件结构由此函数在内部分配。如果提供了事件参
  * 数，则必须在堆上分配该参数，并且调用方不需要将其解除分配。
  * Add a custom parameter checking function.  If the event parameter is NULL
@@ -1201,7 +1194,11 @@ void _expect_string(
 void _expect_not_string(
     const char* const function, const char* const parameter,
     const char* const file, const int line, const char* string,
-    const int count);
+    const int count){
+    declare_initialize_value_pointer_pointer(string_pointer, (char*)string);
+    _expect_check(function, parameter, file, line, check_not_string,
+                  string_pointer.value, NULL, count);
+}
 
 void _expect_memory(
     const char* const function, const char* const parameter,
@@ -1393,8 +1390,10 @@ void* _test_malloc(const size_t size, const char* file, const int line)  {
   const size_t allocate_size = size + (MALLOC_GUARD_SIZE * 2) +
                                 sizeof(*block_info) + MALLOC_ALIGNMENT;
 
-  char* const block = (char*)malloc(allocate_size);
+  char*  block = nullptr;
   try {
+      block = (char*)malloc(allocate_size);
+      block=const_cast< char *const>(block);
       assert_true(block);
       // Calculate the returned address.
       //这段代码的作用是将block指针加上一定的偏移量，并将结果向下舍入到MALLOC_ALIGNMENT的倍数。
@@ -1411,6 +1410,7 @@ void* _test_malloc(const size_t size, const char* file, const int line)  {
   }
   catch (std::exception &e) {
       print_error("malloc failed: %s", e.what());
+      throw ;
   }
 
   set_source_location(&block_info->location, file, line);
@@ -1504,7 +1504,7 @@ void _test_delete(void* const ptr, const char* file, const int line) {
   memset(block, MALLOC_FREE_PATTERN, block_info->allocated_size);
   delete(block);
 }
-
+#define delete test_delete
 
 // Use the real free in this function.
 #undef free
@@ -1522,7 +1522,7 @@ void _test_free(void* const ptr, const char* file, const int line) {
         char *guards[2] = {block - MALLOC_GUARD_SIZE,
                            block + block_info->size};
         for (i = 0; i < ARRAY_LENGTH(guards); i++) {
-            unsigned int j;
+            unsigned int j{0};
             char * const guard = guards[i];
             for (j = 0; j < MALLOC_GUARD_SIZE; j++) {
                 const char diff = guard[j] - MALLOC_GUARD_PATTERN;
@@ -1535,7 +1535,10 @@ void _test_free(void* const ptr, const char* file, const int line) {
     catch (memory_err & e) {
         std::cerr<<e.what()<<" occer in "<<block_info->location.file
         <<':'<<block_info->location.line<<std::endl;
-        throw ;
+        throw  ;
+    }
+    catch (...) {
+        throw  ;
     }
     list_remove(&block_info->node, NULL, NULL);
 
@@ -1545,7 +1548,7 @@ void _test_free(void* const ptr, const char* file, const int line) {
 }
 #define free test_free
 
-//调用_test_malloc
+//调用_test_malloc,calloc 使用示例int *p = (int *)calloc(20, sizeof(int)）
 void* _test_calloc(const size_t number_of_elements, const size_t size,
                    const char* file, const int line) {
   void* const ptr = _test_malloc(number_of_elements * size, file, line);

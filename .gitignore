@@ -4,3 +4,4 @@ lib/
 .ninja_deps
 .ninja_deps
 cmake-build-debug/
+*.o

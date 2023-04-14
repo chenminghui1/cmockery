@@ -541,10 +541,8 @@ void _test_delete(void* const ptr, const char* file, const int line);
 
 
 void _fail(const char * const file, const int line);
-int _run_test(
-    const char * const function_name, const UnitTestFunction Function,
-    void ** const state, const UnitTestFunctionType function_type,
-    const void* const heap_check_point);
+void _run_test(const char *const function_name, const UnitTestFunction Function, void **const state,
+               const UnitTestFunctionType function_type, const void *const heap_check_point, int &failed);
 int _run_tests(const UnitTest * const tests, const size_t number_of_tests);
 
 // Standard output and error print methods.

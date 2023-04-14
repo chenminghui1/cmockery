@@ -172,7 +172,7 @@ static int perform_operation(int number_of_arguments, char *arguments[],
   if (!number_of_arguments)
     return 0;
 
-  // Parse the first value.
+  // Parse the first value.分析第一个值
   value = (int)strtol(arguments[0], &end_of_integer, 10);
   if (end_of_integer == arguments[0]) {
     // If an error occurred while parsing the integer.
@@ -183,7 +183,7 @@ static int perform_operation(int number_of_arguments, char *arguments[],
 
   // Allocate an array for the output values.
   *intermediate_values = static_cast<int *>(
-      calloc(((number_of_arguments - 1) / 2), sizeof(**intermediate_values)));
+      calloc(((number_of_arguments -1) / 2), sizeof(**intermediate_values)));
 
   i = 1;
   while (i < number_of_arguments) {

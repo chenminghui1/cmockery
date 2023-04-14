@@ -38,5 +38,15 @@ namespace ctest {
     public:
         const char *what() const throw();
     };
+    class sig_err : public std::exception {
+    public:
+        sig_err() = delete;
+        sig_err(char *_sig_str) noexcept:
+                sig_str{_sig_str} {
+        };
+        const char *what() const throw();
+    private:
+        char * sig_str;
+    };
 }
 #endif //CMOCKERY_CTEST_EXCEPTION_H
