@@ -136,7 +136,8 @@ lambda表达式也是一个函数对象，编译遇到一个lambda表达式就�
 ## 异常处理
 ### try{...} catch(){...}
 1. try里面定义的变量是局部变量，无法在代码块外面使用
-
+2. catch里面的参数是一个引用，可以修改
+3. 
 ## 信号
 C++的信号处理函数在`<csignal>`里面。  
 ![img.png](doc_source/signal.png "常见信号描述")
@@ -249,8 +250,11 @@ void leak_memory() {
     int * const temporary = (int*)ctest::malloc(sizeof(int));
     *temporary = 0;
 }
-
 ```
+
+### 问题： 在调用expect_string时，总报错`malloc(): corrupted top size`
+原因：364行`SymbolMapValue * const new_symbol_map_value =static_cast<SymbolMapValue *>(
+malloc(sizeof(*new_symbol_map_value)));` 少写了*，导致申请的内存大小不对，导致内存越界。
 
 
 
