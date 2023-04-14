@@ -1054,7 +1054,7 @@ int _run_tests(const UnitTest * const tests, const size_t number_of_tests) {
             }
             case UNIT_TEST_FUNCTION_TYPE_TEARDOWN:
                 // Check the heap based on the last setup checkpoint.
-                assert_true(number_of_test_states);
+                assert_true(number_of_test_states);//teardowm必须在setup之后
                 current_TestState = &test_states[--number_of_test_states];
                 test_check_point = current_TestState->check_point;
                 current_state = &current_TestState->state;
@@ -1120,7 +1120,8 @@ int _run_tests(const UnitTest * const tests, const size_t number_of_tests) {
     } else {
       print_message("All %d tests passed\n", tests_executed);
     }
-    print_message("All tests took %d(μs)\n",time_end.tv_usec-time_start.tv_usec);
+    print_message("All tests took %f(us)\n",(time_end.tv_usec\
+    -time_start.tv_usec));
     return (int)total_failed;
 }
 
