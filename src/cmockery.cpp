@@ -17,6 +17,7 @@
 #include "../include/cmockery.h"
 #include "../include/ctest_assert.h"
 #include "../include/ctest_exception.h"
+#include "../include/ctest_log.h"
 namespace ctest{
 ///XXX:使用const代替define，但是具体影响没有进行测试
 // 动态分配块周围的保护字节大小。
@@ -66,6 +67,10 @@ inline int ARRAY_LENGTH(T x) {
 #define cast_largest_integral_type_to_pointer( \
     pointer_type, largest_integral_type) \
     ((pointer_type)((ValuePointer*)&(largest_integral_type))->pointer)
+
+    //初始化log实例
+    std::shared_ptr<Log> Log::log = nullptr;
+    std::mutex log_mutex;
 
 // Used to cast LargetIntegralType to void* and vice versa.
 typedef union ValuePointer {
@@ -1120,8 +1125,8 @@ int _run_tests(const UnitTest * const tests, const size_t number_of_tests) {
     } else {
       print_message("All %d tests passed\n", tests_executed);
     }
-    print_message("All tests took %f(us)\n",(time_end.tv_usec\
-    -time_start.tv_usec));
+    print_message("All tests took %f(ns)\n",(time_end.tv_usec/1000.0+time_end.tv_sec*1000\
+    -time_start.tv_usec/1000.0-time_start.tv_sec*1000));
     return (int)total_failed;
 }
 
