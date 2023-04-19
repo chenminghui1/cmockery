@@ -317,8 +317,8 @@ cast_to_largest_integral_type(cast_to_pointer_integral_type(value))
 #define malloc test_malloc
 #define calloc test_calloc
 #define free test_free
-#define new test_new
-#define delete test_delete
+
+
 #endif // UNIT_TESTING
 
 

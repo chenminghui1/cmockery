@@ -68,9 +68,8 @@ inline int ARRAY_LENGTH(T x) {
     pointer_type, largest_integral_type) \
     ((pointer_type)((ValuePointer*)&(largest_integral_type))->pointer)
 
-    //初始化log实例
-    std::shared_ptr<Log> Log::log = nullptr;
-    std::mutex log_mutex;
+//初始化log实例
+auto log = Log::getInstance();
 
 // Used to cast LargetIntegralType to void* and vice versa.
 typedef union ValuePointer {
@@ -683,9 +682,6 @@ static void exception_handler(int sig) {
     exit(-1);
 }
 
-
-
-
 void fail_if_leftover_values(const char *const name) {
     int error_occurred = 0;//标记是否发生错误
     remove_always_return_values(&global_function_result_map_head, 1);
@@ -945,15 +941,16 @@ static int get_symbol_value(ListNode *const head, const char *const *symbol_name
             print_message("[       OK ] %s\n", function_name);
         }
         rc = 0;
+
     }catch (std::exception &e) {
         global_running_test = 0;//标记当前并无测试正在运行
-
+        LOG_ERROR("exception:%s",e.what()   );
         std::cerr<<e.what()<<std::endl;
         print_message("[  FAILED  ] %s\n", function_name);
     }
     catch (...) {
         global_running_test = 0;//标记当前并无测试正在运行
-        print_message("\n[  FAILED  ] %s\n", function_name);
+        print_message("[  FAILED  ] %s\n", function_name);
     }
 /*    if (setjmp(global_run_test_env) == 0) {
         struct timeval time_start, time_end;
@@ -1475,42 +1472,42 @@ void * _test_new(const size_t size, const char* file, const int line) {
 }
 #define new test_new
 
-#undef delete
-void _test_delete(void* const ptr, const char* file, const int line) {
-  unsigned int i;
-  char *block = (char*)ptr;
-  MallocBlockInfo *block_info;
-  _assert_true(reinterpret_cast<LargestIntegralType>(&ptr), "ptr", file, line);
-  block_info = (MallocBlockInfo*)(block - (MALLOC_GUARD_SIZE +
-                                            sizeof(*block_info)));
-  // Check the guard blocks.
-  {
-    char *guards[2] = {block - MALLOC_GUARD_SIZE,
-                       block + block_info->size};
-    for (i = 0; i < ARRAY_LENGTH(guards); i++) {
-      unsigned int j;
-      char * const guard = guards[i];
-      for (j = 0; j < MALLOC_GUARD_SIZE; j++) {
-        const char diff = guard[j] - MALLOC_GUARD_PATTERN;
-        if (diff) {
-          print_error(
-              "Guard block of 0x%08x size=%d allocated by "
-              SOURCE_LOCATION_FORMAT " at 0x%08x is corrupt\n",
-              (size_t)ptr, block_info->size,
-              block_info->location.file, block_info->location.line,
-              (size_t)&guard[j]);
-          _fail(file, line);
-        }
-      }
-    }
-  }
-  list_remove(&block_info->node, NULL, NULL);
-
-  block = static_cast<char *>(block_info->block);
-  memset(block, MALLOC_FREE_PATTERN, block_info->allocated_size);
-  delete(block);
-}
-#define delete test_delete
+//#undef delete
+//void _test_delete(void* const ptr, const char* file, const int line) {
+//  unsigned int i;
+//  char *block = (char*)ptr;
+//  MallocBlockInfo *block_info;
+//  _assert_true(reinterpret_cast<LargestIntegralType>(&ptr), "ptr", file, line);
+//  block_info = (MallocBlockInfo*)(block - (MALLOC_GUARD_SIZE +
+//                                            sizeof(*block_info)));
+//  // Check the guard blocks.
+//  {
+//    char *guards[2] = {block - MALLOC_GUARD_SIZE,
+//                       block + block_info->size};
+//    for (i = 0; i < ARRAY_LENGTH(guards); i++) {
+//      unsigned int j;
+//      char * const guard = guards[i];
+//      for (j = 0; j < MALLOC_GUARD_SIZE; j++) {
+//        const char diff = guard[j] - MALLOC_GUARD_PATTERN;
+//        if (diff) {
+//          print_error(
+//              "Guard block of 0x%08x size=%d allocated by "
+//              SOURCE_LOCATION_FORMAT " at 0x%08x is corrupt\n",
+//              (size_t)ptr, block_info->size,
+//              block_info->location.file, block_info->location.line,
+//              (size_t)&guard[j]);
+//          _fail(file, line);
+//        }
+//      }
+//    }
+//  }
+//  list_remove(&block_info->node, NULL, NULL);
+//
+//  block = static_cast<char *>(block_info->block);
+//  memset(block, MALLOC_FREE_PATTERN, block_info->allocated_size);
+//  delete(block);
+//}
+//#define delete test_delete
 
 // Use the real free in this function.
 #undef free
